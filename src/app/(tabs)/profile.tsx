@@ -1,16 +1,14 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, TextInput, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { isBackendConfigured } from '@/lib/supabase';
 import { coursePoints, totalPoints } from '@/lib/points';
 import { useAppStore, useCoursesById, usePlayedCourseIds } from '@/store/use-app-store';
 
 export default function ProfileScreen() {
-  const theme = useTheme();
   const profile = useAppStore((s) => s.profile);
   const updateProfile = useAppStore((s) => s.updateProfile);
   const rounds = useAppStore((s) => s.rounds);
@@ -32,89 +30,77 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <View className="flex-1 bg-background">
+      <ScrollView contentContainerClassName="gap-4 p-4">
         {editing ? (
-          <View style={styles.editForm}>
+          <View className="gap-2">
             <TextInput
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+              className="rounded-lg bg-muted px-4 py-3 text-base text-foreground"
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor={theme.textSecondary}
+              placeholderClassName="text-muted-foreground"
             />
             <TextInput
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+              className="rounded-lg bg-muted px-4 py-3 text-base text-foreground"
               value={handicap}
               onChangeText={setHandicap}
               keyboardType="numeric"
               placeholder="Handicap (optional)"
-              placeholderTextColor={theme.textSecondary}
+              placeholderClassName="text-muted-foreground"
             />
-            <Pressable style={styles.saveButton} onPress={saveProfile}>
-              <ThemedText type="smallBold" style={styles.saveButtonText}>Save</ThemedText>
-            </Pressable>
+            <Button onPress={saveProfile}>
+              <Text>Save</Text>
+            </Button>
           </View>
         ) : (
-          <Pressable onPress={() => setEditing(true)}>
-            <ThemedText type="subtitle">{profile.name}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {profile.handicap !== undefined ? `Handicap ${profile.handicap} · ` : ''}Tap to edit
-            </ThemedText>
-          </Pressable>
+          <Button variant="ghost" className="h-auto items-start justify-start px-0" onPress={() => setEditing(true)}>
+            <View className="gap-1">
+              <Text className="text-3xl font-semibold text-foreground">{profile.name}</Text>
+              <Text className="text-sm text-muted-foreground">
+                {profile.handicap !== undefined ? `Handicap ${profile.handicap} · ` : ''}Tap to edit
+              </Text>
+            </View>
+          </Button>
         )}
 
-        <View style={styles.pointsCard}>
-          <ThemedText type="title" style={styles.pointsValue}>{points}</ThemedText>
-          <ThemedText type="smallBold" style={styles.pointsLabel}>rarity points</ThemedText>
-        </View>
+        <Card className="items-center border-0 bg-primary py-8">
+          <Text className="text-6xl font-semibold text-primary-foreground">{points}</Text>
+          <Text className="text-sm font-medium text-primary-foreground opacity-80">rarity points</Text>
+        </Card>
 
-        <View style={styles.statsGrid}>
+        <View className="flex-row justify-around">
           <Stat label="Courses played" value={String(playedIds.size)} />
           <Stat label="Rounds logged" value={String(rounds.length)} />
           <Stat label="Countries" value={String(countries.size)} />
         </View>
 
         {rarest && (
-          <View style={styles.rareCard}>
-            <ThemedText type="smallBold">Rarest tick: {rarest.name}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Only ~{rarest.popularity}% of golfers have played it — worth {coursePoints(rarest)} pts
-            </ThemedText>
-          </View>
+          <Card>
+            <CardContent className="gap-1 pt-4">
+              <Text className="font-semibold">Rarest tick: {rarest.name}</Text>
+              <Text className="text-sm text-muted-foreground">
+                Only ~{rarest.popularity}% of golfers have played it — worth {coursePoints(rarest)} pts
+              </Text>
+            </CardContent>
+          </Card>
         )}
 
-        <ThemedText type="small" themeColor="textSecondary" style={styles.backendNote}>
+        <Text className="text-center text-sm text-muted-foreground">
           {isBackendConfigured
             ? 'Connected to backend.'
             : 'Running local-only. Data lives on this device until the Supabase backend is connected (see supabase/ in the repo).'}
-        </ThemedText>
+        </Text>
       </ScrollView>
-    </ThemedView>
+    </View>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.stat}>
-      <ThemedText type="subtitle">{value}</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">{label}</ThemedText>
+    <View className="items-center gap-1">
+      <Text className="text-3xl font-semibold text-foreground">{value}</Text>
+      <Text className="text-sm text-muted-foreground">{label}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: Spacing.three, gap: Spacing.three },
-  editForm: { gap: Spacing.two },
-  input: { borderRadius: 10, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two + 2, fontSize: 16 },
-  saveButton: { backgroundColor: '#2E7D32', borderRadius: 10, alignItems: 'center', paddingVertical: Spacing.two + 2 },
-  saveButtonText: { color: '#fff' },
-  pointsCard: { backgroundColor: '#2E7D32', borderRadius: 16, alignItems: 'center', padding: Spacing.four },
-  pointsValue: { color: '#fff' },
-  pointsLabel: { color: '#C8E6C9' },
-  statsGrid: { flexDirection: 'row', justifyContent: 'space-around' },
-  stat: { alignItems: 'center' },
-  rareCard: { borderWidth: 1, borderColor: '#2E7D32', borderRadius: 12, padding: Spacing.three, gap: 2 },
-  backendNote: { textAlign: 'center', marginTop: Spacing.two },
-});
