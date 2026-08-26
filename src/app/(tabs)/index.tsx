@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CourseMap from '@/components/course-map';
-import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { totalPoints } from '@/lib/points';
 import { useAppStore, useCoursesById, usePlayedCourseIds } from '@/store/use-app-store';
 
@@ -18,53 +18,26 @@ export default function MapScreen() {
   const points = totalPoints(rounds, coursesById);
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background">
       <CourseMap courses={courses} playedCourseIds={playedIds} />
 
-      <View style={[styles.statsChip, { top: insets.top + Spacing.two }]}>
-        <ThemedText type="smallBold" style={styles.chipText}>
+      <View
+        className="absolute self-center items-center rounded-xl bg-foreground/90 px-4 py-2"
+        style={{ top: insets.top + 8 }}
+      >
+        <Text className="font-medium text-sm text-background">
           ⛳ {playedIds.size}/{courses.length} courses · {points} pts
-        </ThemedText>
-        <ThemedText type="small" style={styles.chipHint}>
-          Long-press the map to add a course
-        </ThemedText>
+        </Text>
+        <Text className="text-xs text-background/70">Long-press the map to add a course</Text>
       </View>
 
-      <Pressable
-        style={[styles.fab, { bottom: insets.bottom + Spacing.four }]}
+      <Button
+        className="absolute right-4 shadow-lg"
+        style={{ bottom: insets.bottom + 24 }}
         onPress={() => router.push('/log-round')}
       >
-        <ThemedText type="smallBold" style={styles.fabText}>+ Log round</ThemedText>
-      </Pressable>
+        <Text>+ Log round</Text>
+      </Button>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  statsChip: {
-    position: 'absolute',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(20, 40, 20, 0.85)',
-    borderRadius: 20,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
-  },
-  chipText: { color: '#fff' },
-  chipHint: { color: '#C8E6C9' },
-  fab: {
-    position: 'absolute',
-    right: Spacing.three,
-    backgroundColor: '#2E7D32',
-    borderRadius: 28,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  fabText: { color: '#fff' },
-});

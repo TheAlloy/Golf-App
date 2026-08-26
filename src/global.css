@@ -3,76 +3,77 @@
 @tailwind utilities;
 
 /*
- * Design tokens, in the exact shape shadcn/ui generates.
+ * Design tokens for the shadcn preset b1aIuQ2XC:
+ *   base UI · luma style · stone base · blue theme · large radius
  *
- * To adopt a shadcn theme: paste the :root and .dark blocks from that
- * template's globals.css over the ones below. Nothing else in the app needs
- * to change — every component reads these through Tailwind class names.
- *
- * One conversion note: recent shadcn themes emit oklch() values, which React
- * Native's colour parser does not understand. Convert those to the HSL
- * triplet form used here ("H S% L%", no hsl() wrapper) before pasting.
+ * Palette values are the exact Tailwind stone/blue/red scales, converted from
+ * oklch() to the "H S% L%" triplets React Native can parse (its colour parser
+ * has no oklch support). Semantic names and structure follow shadcn's, so a
+ * generated globals.css can be pasted over these two blocks.
  */
 :root {
   --background: 0 0% 100%;
-  --foreground: 0 0% 7%;
+  --foreground: 20 13.8% 4.1%; /* stone-950 */
 
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 7%;
+  --card-foreground: 20 13.8% 4.1%;
 
-  --primary: 123 45% 34%;
-  --primary-foreground: 0 0% 100%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 13.8% 4.1%;
 
-  --secondary: 120 14% 96%;
-  --secondary-foreground: 0 0% 7%;
+  --primary: 221 97.1% 53.5%; /* blue-600 */
+  --primary-foreground: 214 96.5% 96.8%; /* blue-50 */
 
-  --muted: 120 14% 96%;
-  --muted-foreground: 215 9% 45%;
+  --secondary: 60 3.6% 95.9%; /* stone-100 */
+  --secondary-foreground: 24 9.6% 10%; /* stone-900 */
 
-  --accent: 123 45% 34%;
-  --accent-foreground: 0 0% 100%;
+  --muted: 60 3.6% 95.9%;
+  --muted-foreground: 25 5.9% 44.6%; /* stone-500 */
 
-  --destructive: 0 72% 51%;
+  --accent: 60 3.6% 95.9%;
+  --accent-foreground: 24 9.6% 10%;
+
+  --destructive: 357 100% 45.3%; /* red-600 */
   --destructive-foreground: 0 0% 100%;
 
-  --border: 120 6% 90%;
-  --input: 120 6% 90%;
-  --ring: 123 45% 34%;
+  --border: 20 6.9% 90%; /* stone-200 */
+  --input: 20 6.9% 90%;
+  --ring: 221 97.1% 53.5%;
 
-  --radius: 0.75rem;
+  --radius: 1rem; /* preset radius: large */
 
-  --font-display:
-    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
-    Segoe UI Symbol, Noto Color Emoji;
+  --font-sans: Raleway_400Regular;
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
-  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
 
 .dark:root {
-  --background: 0 0% 0%;
-  --foreground: 0 0% 100%;
+  --background: 20 13.8% 4.1%; /* stone-950 */
+  --foreground: 60 7.1% 97.9%; /* stone-50 */
 
-  --card: 220 6% 13%;
-  --card-foreground: 0 0% 100%;
+  --card: 24 9.6% 10%; /* stone-900 */
+  --card-foreground: 60 7.1% 97.9%;
 
-  --primary: 123 40% 45%;
-  --primary-foreground: 0 0% 100%;
+  --popover: 24 9.6% 10%;
+  --popover-foreground: 60 7.1% 97.9%;
 
-  --secondary: 220 5% 15%;
-  --secondary-foreground: 0 0% 100%;
+  --primary: 216 100% 58.5%; /* blue-500, lifted for dark grounds */
+  --primary-foreground: 20 13.8% 4.1%;
 
-  --muted: 220 5% 15%;
-  --muted-foreground: 215 12% 71%;
+  --secondary: 12 7.2% 15.1%; /* stone-800 */
+  --secondary-foreground: 60 7.1% 97.9%;
 
-  --accent: 123 40% 45%;
-  --accent-foreground: 0 0% 100%;
+  --muted: 12 7.2% 15.1%;
+  --muted-foreground: 24 5.8% 63.1%; /* stone-400 */
 
-  --destructive: 0 72% 51%;
+  --accent: 12 7.2% 15.1%;
+  --accent-foreground: 60 7.1% 97.9%;
+
+  --destructive: 357 95.9% 57.7%; /* red-500 */
   --destructive-foreground: 0 0% 100%;
 
-  --border: 220 5% 20%;
-  --input: 220 5% 20%;
-  --ring: 123 40% 45%;
+  --border: 12 7.2% 15.1%;
+  --input: 12 7.2% 15.1%;
+  --ring: 216 100% 58.5%;
 }

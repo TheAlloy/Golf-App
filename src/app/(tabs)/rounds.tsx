@@ -1,10 +1,9 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { Round } from '@/models/types';
 import { useAppStore, useCoursesById } from '@/store/use-app-store';
 
@@ -21,27 +20,27 @@ export default function RoundsScreen() {
     const course = coursesById.get(r.courseId);
     return (
       <Pressable
-        style={styles.card}
+        className="gap-1 border-b border-border py-4"
         onPress={() => router.push({ pathname: '/course/[id]', params: { id: r.courseId } })}
       >
-        <View style={styles.cardHeader}>
-          <ThemedText type="smallBold">{course?.name ?? 'Unknown course'}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">{r.date}</ThemedText>
+        <View className="flex-row items-center justify-between">
+          <Text className="font-semibold">{course?.name ?? 'Unknown course'}</Text>
+          <Text className="text-sm text-muted-foreground">{r.date}</Text>
         </View>
-        <ThemedText type="small" themeColor="textSecondary">
+        <Text className="text-sm text-muted-foreground">
           {r.holesPlayed} holes
           {r.score !== undefined ? ` · ${r.score} (${r.toPar! >= 0 ? '+' : ''}${r.toPar})` : ''}
           {r.playedWith.length > 0 ? ` · with ${r.playedWith.map(friendName).join(', ')}` : ''}
-        </ThemedText>
+        </Text>
         {(r.occasion || r.tags.length > 0) && (
-          <ThemedText type="small" themeColor="textSecondary">
+          <Text className="text-sm text-muted-foreground">
             {[r.occasion, ...r.tags.map((t) => `#${t}`)].filter(Boolean).join(' · ')}
-          </ThemedText>
+          </Text>
         )}
         {r.photos.length > 0 && (
-          <View style={styles.photoRow}>
+          <View className="mt-1 flex-row gap-2">
             {r.photos.slice(0, 4).map((uri) => (
-              <Image key={uri} source={{ uri }} style={styles.photo} />
+              <Image key={uri} source={{ uri }} style={{ width: 56, height: 56, borderRadius: 8 }} />
             ))}
           </View>
         )}
@@ -50,50 +49,24 @@ export default function RoundsScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <View className="flex-1 bg-background">
       <FlatList
         data={sorted}
         keyExtractor={(r) => r.id}
         renderItem={renderRound}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="grow p-4"
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <ThemedText type="subtitle">No rounds yet</ThemedText>
-            <ThemedText themeColor="textSecondary" style={styles.emptyText}>
+          <View className="flex-1 items-center justify-center gap-2 p-6">
+            <Text className="text-3xl font-semibold text-foreground">No rounds yet</Text>
+            <Text className="text-center text-muted-foreground">
               Log your first round to start filling in the map and earning rarity points.
-            </ThemedText>
+            </Text>
           </View>
         }
       />
-      <Pressable style={styles.fab} onPress={() => router.push('/log-round')}>
-        <ThemedText type="smallBold" style={styles.fabText}>+ Log round</ThemedText>
-      </Pressable>
-    </ThemedView>
+      <Button className="absolute bottom-6 right-4 shadow-lg" onPress={() => router.push('/log-round')}>
+        <Text>+ Log round</Text>
+      </Button>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  list: { padding: Spacing.three, gap: Spacing.two, flexGrow: 1 },
-  card: { paddingVertical: Spacing.three, gap: 4, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#9E9E9E55' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  photoRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
-  photo: { width: 56, height: 56, borderRadius: 8 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.four },
-  emptyText: { textAlign: 'center' },
-  fab: {
-    position: 'absolute',
-    right: Spacing.three,
-    bottom: Spacing.four,
-    backgroundColor: '#2E7D32',
-    borderRadius: 28,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  fabText: { color: '#fff' },
-});

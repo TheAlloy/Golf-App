@@ -1,65 +1,53 @@
+import { useColorScheme } from 'react-native';
+
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * The same tokens as src/global.css, for the handful of places that need a
+ * real colour value rather than a Tailwind class: navigation options and
+ * map markers, which are configured through props, not styles.
+ *
+ * Keep in step with global.css when the theme changes.
  */
+export type ThemeColors = {
+  background: string;
+  foreground: string;
+  card: string;
+  primary: string;
+  primaryForeground: string;
+  muted: string;
+  mutedForeground: string;
+  border: string;
+  destructive: string;
+};
 
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
-export const Colors = {
+export const themeColors: Record<'light' | 'dark', ThemeColors> = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    background: 'hsl(0, 0%, 100%)',
+    foreground: 'hsl(20, 13.8%, 4.1%)',
+    card: 'hsl(0, 0%, 100%)',
+    primary: 'hsl(221, 97.1%, 53.5%)',
+    primaryForeground: 'hsl(214, 96.5%, 96.8%)',
+    muted: 'hsl(60, 3.6%, 95.9%)',
+    mutedForeground: 'hsl(25, 5.9%, 44.6%)',
+    border: 'hsl(20, 6.9%, 90%)',
+    destructive: 'hsl(357, 100%, 45.3%)',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    background: 'hsl(20, 13.8%, 4.1%)',
+    foreground: 'hsl(60, 7.1%, 97.9%)',
+    card: 'hsl(24, 9.6%, 10%)',
+    primary: 'hsl(216, 100%, 58.5%)',
+    primaryForeground: 'hsl(20, 13.8%, 4.1%)',
+    muted: 'hsl(12, 7.2%, 15.1%)',
+    mutedForeground: 'hsl(24, 5.8%, 63.1%)',
+    border: 'hsl(12, 7.2%, 15.1%)',
+    destructive: 'hsl(357, 95.9%, 57.7%)',
   },
-} as const;
+};
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export function useThemeColors(): ThemeColors {
+  return themeColors[useColorScheme() === 'dark' ? 'dark' : 'light'];
+}
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+/** Map marker colours: played courses take the theme accent. */
+export const MARKER_PLAYED = themeColors.light.primary;
+export const MARKER_UNPLAYED = themeColors.light.mutedForeground;

@@ -38,6 +38,17 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+      },
+      // React Native has no font synthesis, so each weight is its own family.
+      fontFamily: {
+        sans: ['Raleway_400Regular'],
+        medium: ['Raleway_500Medium'],
+        semibold: ['Raleway_600SemiBold'],
+        bold: ['Raleway_700Bold'],
       },
       borderRadius: {
         xl: 'calc(var(--radius) + 4px)',

@@ -1,16 +1,14 @@
-import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Text } from '@/components/ui/text';
+import { cn } from '@/lib/cn';
 import { useAppStore } from '@/store/use-app-store';
-
-const GREEN = '#2E7D32';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -18,7 +16,6 @@ function todayIso(): string {
 
 export default function LogRoundScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const params = useLocalSearchParams<{ courseId?: string }>();
   const courses = useAppStore((s) => s.courses);
   const friends = useAppStore((s) => s.friends);
@@ -56,9 +53,7 @@ export default function LogRoundScreen() {
       allowsMultipleSelection: true,
       quality: 0.7,
     });
-    if (!result.canceled) {
-      setPhotos((p) => [...p, ...result.assets.map((a) => a.uri)]);
-    }
+    if (!result.canceled) setPhotos((p) => [...p, ...result.assets.map((a) => a.uri)]);
   };
 
   const save = () => {
@@ -87,162 +82,124 @@ export default function LogRoundScreen() {
     router.back();
   };
 
-  const inputStyle = [styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }];
+  const chip = (active: boolean) =>
+    cn(
+      'rounded-full border px-4 py-1.5',
+      active ? 'border-primary bg-primary' : 'border-border bg-background'
+    );
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ThemedText type="smallBold">Course</ThemedText>
+    <View className="flex-1 bg-background">
+      <ScrollView contentContainerClassName="gap-2 p-4 pb-16" keyboardShouldPersistTaps="handled">
+        <Text className="font-semibold text-sm">Course</Text>
         {selectedCourse ? (
-          <Pressable style={styles.selectedCourse} onPress={() => { setCourseId(undefined); setCourseQuery(''); }}>
-            <ThemedText>{selectedCourse.name}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">Tap to change</ThemedText>
+          <Pressable
+            className="rounded-lg border border-primary p-4"
+            onPress={() => {
+              setCourseId(undefined);
+              setCourseQuery('');
+            }}
+          >
+            <Text>{selectedCourse.name}</Text>
+            <Text className="text-sm text-muted-foreground">Tap to change</Text>
           </Pressable>
         ) : (
           <>
-            <TextInput
-              style={inputStyle}
-              placeholder="Search courses…"
-              placeholderTextColor={theme.textSecondary}
-              value={courseQuery}
-              onChangeText={setCourseQuery}
-            />
+            <Input placeholder="Search courses…" value={courseQuery} onChangeText={setCourseQuery} />
             {courseMatches.map((c) => (
-              <Pressable key={c.id} style={styles.courseOption} onPress={() => setCourseId(c.id)}>
-                <ThemedText>{c.name}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
+              <Pressable key={c.id} className="px-1 py-2" onPress={() => setCourseId(c.id)}>
+                <Text>{c.name}</Text>
+                <Text className="text-sm text-muted-foreground">
                   {[c.city, c.country].filter(Boolean).join(', ')}
-                </ThemedText>
+                </Text>
               </Pressable>
             ))}
           </>
         )}
 
-        <ThemedText type="smallBold">Date</ThemedText>
-        <TextInput
-          style={inputStyle}
-          value={date}
-          onChangeText={setDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={theme.textSecondary}
-        />
+        <Text className="font-semibold text-sm">Date</Text>
+        <Input value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
 
-        <ThemedText type="smallBold">Holes</ThemedText>
-        <View style={styles.chipRow}>
+        <Text className="font-semibold text-sm">Holes</Text>
+        <View className="flex-row flex-wrap items-center gap-2">
           {([9, 18] as const).map((h) => (
-            <Pressable
-              key={h}
-              style={[styles.chip, holesPlayed === h && styles.chipActive]}
-              onPress={() => setHolesPlayed(h)}
-            >
-              <ThemedText type="small" style={holesPlayed === h ? styles.chipActiveText : undefined}>
+            <Pressable key={h} className={chip(holesPlayed === h)} onPress={() => setHolesPlayed(h)}>
+              <Text
+                className={cn('text-sm', holesPlayed === h ? 'text-primary-foreground' : 'text-foreground')}
+              >
                 {h} holes
-              </ThemedText>
+              </Text>
             </Pressable>
           ))}
         </View>
 
-        <ThemedText type="smallBold">Score (gross)</ThemedText>
-        <TextInput
-          style={inputStyle}
-          value={score}
-          onChangeText={setScore}
-          keyboardType="number-pad"
-          placeholder="e.g. 84"
-          placeholderTextColor={theme.textSecondary}
-        />
+        <Text className="font-semibold text-sm">Score (gross)</Text>
+        <Input value={score} onChangeText={setScore} keyboardType="number-pad" placeholder="e.g. 84" />
 
-        <ThemedText type="smallBold">Played with</ThemedText>
+        <Text className="font-semibold text-sm">Played with</Text>
         {friends.length === 0 ? (
-          <ThemedText type="small" themeColor="textSecondary">
+          <Text className="text-sm text-muted-foreground">
             Add friends in the Friends tab to tag playing partners.
-          </ThemedText>
+          </Text>
         ) : (
-          <View style={styles.chipRow}>
+          <View className="flex-row flex-wrap items-center gap-2">
             {friends.map((f) => (
               <Pressable
                 key={f.id}
-                style={[styles.chip, playedWith.includes(f.id) && styles.chipActive]}
+                className={chip(playedWith.includes(f.id))}
                 onPress={() => togglePartner(f.id)}
               >
-                <ThemedText type="small" style={playedWith.includes(f.id) ? styles.chipActiveText : undefined}>
+                <Text
+                  className={cn(
+                    'text-sm',
+                    playedWith.includes(f.id) ? 'text-primary-foreground' : 'text-foreground'
+                  )}
+                >
                   {f.name}
-                </ThemedText>
+                </Text>
               </Pressable>
             ))}
           </View>
         )}
 
-        <ThemedText type="smallBold">Occasion</ThemedText>
-        <TextInput
-          style={inputStyle}
+        <Text className="font-semibold text-sm">Occasion</Text>
+        <Input
           value={occasion}
           onChangeText={setOccasion}
           placeholder="e.g. Birthday trip, society day"
-          placeholderTextColor={theme.textSecondary}
         />
 
-        <ThemedText type="smallBold">Tags</ThemedText>
-        <TextInput
-          style={inputStyle}
+        <Text className="font-semibold text-sm">Tags</Text>
+        <Input
           value={tags}
           onChangeText={setTags}
           placeholder="links, windy, stag-do (comma separated)"
-          placeholderTextColor={theme.textSecondary}
         />
 
-        <ThemedText type="smallBold">Photos</ThemedText>
-        <View style={styles.chipRow}>
+        <Text className="font-semibold text-sm">Photos</Text>
+        <View className="flex-row flex-wrap items-center gap-2">
           {photos.map((uri) => (
-            <Image key={uri} source={{ uri }} style={styles.photo} />
+            <Image key={uri} source={{ uri }} style={{ width: 56, height: 56, borderRadius: 8 }} />
           ))}
-          <Pressable style={styles.chip} onPress={pickPhoto}>
-            <ThemedText type="small">+ Add photo</ThemedText>
+          <Pressable className={chip(false)} onPress={pickPhoto}>
+            <Text className="text-sm">+ Add photo</Text>
           </Pressable>
         </View>
 
-        <ThemedText type="smallBold">Notes</ThemedText>
-        <TextInput
-          style={[...inputStyle, styles.notes]}
+        <Text className="font-semibold text-sm">Notes</Text>
+        <Input
+          className="h-24 py-3"
           value={notes}
           onChangeText={setNotes}
           multiline
+          textAlignVertical="top"
           placeholder="Best shot, conditions, who won the money…"
-          placeholderTextColor={theme.textSecondary}
         />
 
-        <Pressable style={styles.saveButton} onPress={save}>
-          <ThemedText type="smallBold" style={styles.saveText}>Save round</ThemedText>
-        </Pressable>
+        <Button className="mt-4" onPress={save}>
+          <Text>Save round</Text>
+        </Button>
       </ScrollView>
-    </ThemedView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: Spacing.three, gap: Spacing.two, paddingBottom: Spacing.six },
-  input: { borderRadius: 10, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two + 2, fontSize: 16 },
-  notes: { minHeight: 80, textAlignVertical: 'top' },
-  selectedCourse: { borderRadius: 10, borderWidth: 1, borderColor: GREEN, padding: Spacing.three },
-  courseOption: { paddingVertical: Spacing.two, paddingHorizontal: Spacing.one },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, alignItems: 'center' },
-  chip: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#9E9E9E',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one + 2,
-  },
-  chipActive: { backgroundColor: GREEN, borderColor: GREEN },
-  chipActiveText: { color: '#fff' },
-  photo: { width: 56, height: 56, borderRadius: 8 },
-  saveButton: {
-    marginTop: Spacing.three,
-    backgroundColor: GREEN,
-    borderRadius: 12,
-    alignItems: 'center',
-    paddingVertical: Spacing.three,
-  },
-  saveText: { color: '#fff' },
-});

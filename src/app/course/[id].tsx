@@ -1,9 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { coursePoints, repeatPlayPoints } from '@/lib/points';
 import { useAppStore } from '@/store/use-app-store';
 
@@ -16,9 +16,9 @@ export default function CourseDetailScreen() {
 
   if (!course) {
     return (
-      <ThemedView style={styles.container}>
-        <ThemedText style={{ padding: Spacing.three }}>Course not found.</ThemedText>
-      </ThemedView>
+      <View className="flex-1 bg-background p-4">
+        <Text>Course not found.</Text>
+      </View>
     );
   }
 
@@ -29,87 +29,70 @@ export default function CourseDetailScreen() {
   );
 
   return (
-    <ThemedView style={styles.container}>
+    <View className="flex-1 bg-background">
       <Stack.Screen options={{ title: course.name }} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <ThemedText type="subtitle">{course.name}</ThemedText>
-        <ThemedText themeColor="textSecondary">
+      <ScrollView contentContainerClassName="gap-2 p-4">
+        <Text className="text-3xl font-semibold text-foreground">{course.name}</Text>
+        <Text className="text-muted-foreground">
           {[course.city, course.country].filter(Boolean).join(', ')}
-        </ThemedText>
+        </Text>
 
-        <View style={styles.statsRow}>
+        <View className="my-2 flex-row gap-6">
           <Stat label="Par" value={String(course.par)} />
           <Stat label="Holes" value={String(course.holes)} />
           <Stat label="Times played" value={String(rounds.length)} />
           <Stat label="Best" value={bestScore !== undefined ? String(bestScore) : '—'} />
         </View>
 
-        <View style={styles.pointsCard}>
-          <ThemedText type="smallBold" style={styles.pointsText}>
-            {rounds.length === 0
-              ? `Worth ${coursePoints(course)} rarity points — only ~${course.popularity}% of golfers have played here`
-              : `Earned ${coursePoints(course)} pts here · +${repeatPlayPoints(course)} per repeat round`}
-          </ThemedText>
-        </View>
+        <Card className="border-0 bg-primary">
+          <CardContent className="pt-4">
+            <Text className="font-medium text-sm text-primary-foreground">
+              {rounds.length === 0
+                ? `Worth ${coursePoints(course)} rarity points — only ~${course.popularity}% of golfers have played here`
+                : `Earned ${coursePoints(course)} pts here · +${repeatPlayPoints(course)} per repeat round`}
+            </Text>
+          </CardContent>
+        </Card>
 
-        <Pressable
-          style={styles.logButton}
+        <Button
+          variant="outline"
           onPress={() => router.push({ pathname: '/log-round', params: { courseId: course.id } })}
         >
-          <ThemedText type="smallBold" style={styles.logButtonText}>+ Log a round here</ThemedText>
-        </Pressable>
+          <Text>+ Log a round here</Text>
+        </Button>
 
-        <ThemedText type="smallBold" style={styles.sectionTitle}>Rounds</ThemedText>
+        <Text className="mt-4 font-semibold text-sm">Rounds</Text>
         {rounds.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">No rounds logged yet.</ThemedText>
+          <Text className="text-sm text-muted-foreground">No rounds logged yet.</Text>
         )}
         {rounds.map((r) => (
-          <View key={r.id} style={styles.roundRow}>
-            <ThemedText>
+          <View key={r.id} className="gap-0.5 py-2">
+            <Text>
               {r.date} · {r.holesPlayed} holes
               {r.score !== undefined ? ` · ${r.score} (${r.toPar! >= 0 ? '+' : ''}${r.toPar})` : ''}
-            </ThemedText>
+            </Text>
             {r.playedWith.length > 0 && (
-              <ThemedText type="small" themeColor="textSecondary">
+              <Text className="text-sm text-muted-foreground">
                 With {r.playedWith.map(friendName).join(', ')}
-              </ThemedText>
+              </Text>
             )}
             {(r.occasion || r.tags.length > 0) && (
-              <ThemedText type="small" themeColor="textSecondary">
+              <Text className="text-sm text-muted-foreground">
                 {[r.occasion, ...r.tags.map((t) => `#${t}`)].filter(Boolean).join(' · ')}
-              </ThemedText>
+              </Text>
             )}
           </View>
         ))}
       </ScrollView>
-    </ThemedView>
+    </View>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.stat}>
-      <ThemedText type="smallBold">{value}</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">{label}</ThemedText>
+    <View className="items-center">
+      <Text className="font-semibold text-sm">{value}</Text>
+      <Text className="text-sm text-muted-foreground">{label}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: Spacing.three, gap: Spacing.two },
-  statsRow: { flexDirection: 'row', gap: Spacing.four, marginVertical: Spacing.two },
-  stat: { alignItems: 'center' },
-  pointsCard: { backgroundColor: '#2E7D32', borderRadius: 12, padding: Spacing.three },
-  pointsText: { color: '#fff' },
-  logButton: {
-    borderWidth: 1,
-    borderColor: '#2E7D32',
-    borderRadius: 12,
-    alignItems: 'center',
-    paddingVertical: Spacing.three,
-  },
-  logButtonText: { color: '#2E7D32' },
-  sectionTitle: { marginTop: Spacing.three },
-  roundRow: { paddingVertical: Spacing.two, gap: 2 },
-});

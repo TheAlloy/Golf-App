@@ -1,16 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Text } from '@/components/ui/text';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function AddCourseScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const params = useLocalSearchParams<{ latitude?: string; longitude?: string }>();
   const addCustomCourse = useAppStore((s) => s.addCustomCourse);
 
@@ -43,49 +41,27 @@ export default function AddCourseScreen() {
     router.push({ pathname: '/course/[id]', params: { id: course.id } });
   };
 
-  const inputStyle = [styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }];
-
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <View className="flex-1 bg-background">
+      <ScrollView contentContainerClassName="gap-2 p-4" keyboardShouldPersistTaps="handled">
         {hasPin && (
-          <ThemedText type="small" themeColor="textSecondary">
+          <Text className="text-sm text-muted-foreground">
             Pin: {latitude.toFixed(4)}, {longitude.toFixed(4)}
-          </ThemedText>
+          </Text>
         )}
-        <ThemedText type="smallBold">Course name</ThemedText>
-        <TextInput
-          style={inputStyle}
-          value={name}
-          onChangeText={setName}
-          placeholder="e.g. Little Hay Golf Club"
-          placeholderTextColor={theme.textSecondary}
-        />
-        <ThemedText type="smallBold">Town / city</ThemedText>
-        <TextInput style={inputStyle} value={city} onChangeText={setCity} placeholder="Optional" placeholderTextColor={theme.textSecondary} />
-        <ThemedText type="smallBold">Country</ThemedText>
-        <TextInput style={inputStyle} value={country} onChangeText={setCountry} placeholder="Optional" placeholderTextColor={theme.textSecondary} />
-        <ThemedText type="smallBold">Par</ThemedText>
-        <TextInput style={inputStyle} value={par} onChangeText={setPar} keyboardType="number-pad" placeholderTextColor={theme.textSecondary} />
+        <Text className="font-semibold text-sm">Course name</Text>
+        <Input value={name} onChangeText={setName} placeholder="e.g. Little Hay Golf Club" />
+        <Text className="font-semibold text-sm">Town / city</Text>
+        <Input value={city} onChangeText={setCity} placeholder="Optional" />
+        <Text className="font-semibold text-sm">Country</Text>
+        <Input value={country} onChangeText={setCountry} placeholder="Optional" />
+        <Text className="font-semibold text-sm">Par</Text>
+        <Input value={par} onChangeText={setPar} keyboardType="number-pad" />
 
-        <Pressable style={styles.saveButton} onPress={save}>
-          <ThemedText type="smallBold" style={styles.saveText}>Add course</ThemedText>
-        </Pressable>
+        <Button className="mt-4" onPress={save}>
+          <Text>Add course</Text>
+        </Button>
       </ScrollView>
-    </ThemedView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: Spacing.three, gap: Spacing.two },
-  input: { borderRadius: 10, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two + 2, fontSize: 16 },
-  saveButton: {
-    marginTop: Spacing.three,
-    backgroundColor: '#2E7D32',
-    borderRadius: 12,
-    alignItems: 'center',
-    paddingVertical: Spacing.three,
-  },
-  saveText: { color: '#fff' },
-});

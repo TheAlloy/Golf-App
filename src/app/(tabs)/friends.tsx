@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Text } from '@/components/ui/text';
 import { Friend } from '@/models/types';
 import { useAppStore } from '@/store/use-app-store';
 
 export default function FriendsScreen() {
-  const theme = useTheme();
   const friends = useAppStore((s) => s.friends);
   const rounds = useAppStore((s) => s.rounds);
   const addFriend = useAppStore((s) => s.addFriend);
@@ -35,77 +33,54 @@ export default function FriendsScreen() {
     ]);
 
   const renderFriend = ({ item: f }: { item: Friend }) => (
-    <Pressable style={styles.row} onLongPress={() => confirmRemove(f)}>
-      <View style={[styles.avatar, { backgroundColor: f.avatarColor }]}>
-        <ThemedText type="smallBold" style={styles.avatarText}>
-          {f.name.slice(0, 1).toUpperCase()}
-        </ThemedText>
+    <Pressable className="flex-row items-center gap-4 py-3" onLongPress={() => confirmRemove(f)}>
+      <View
+        className="h-10 w-10 items-center justify-center rounded-full"
+        style={{ backgroundColor: f.avatarColor }}
+      >
+        <Text className="font-semibold text-sm text-white">{f.name.slice(0, 1).toUpperCase()}</Text>
       </View>
-      <View style={styles.rowText}>
-        <ThemedText>{f.name}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
+      <View className="flex-1">
+        <Text>{f.name}</Text>
+        <Text className="text-sm text-muted-foreground">
           {f.handicap !== undefined ? `HCP ${f.handicap} · ` : ''}
           {roundsTogether(f.id)} rounds together
-        </ThemedText>
+        </Text>
       </View>
     </Pressable>
   );
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.form}>
-        <TextInput
-          style={[styles.input, styles.nameInput, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          value={name}
-          onChangeText={setName}
-          placeholder="Friend's name"
-          placeholderTextColor={theme.textSecondary}
-        />
-        <TextInput
-          style={[styles.input, styles.hcpInput, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+    <View className="flex-1 bg-background">
+      <View className="flex-row gap-2 p-4">
+        <Input className="flex-1" value={name} onChangeText={setName} placeholder="Friend's name" />
+        <Input
+          className="w-20"
           value={handicap}
           onChangeText={setHandicap}
           keyboardType="numeric"
           placeholder="HCP"
-          placeholderTextColor={theme.textSecondary}
         />
-        <Pressable style={styles.addButton} onPress={submit}>
-          <ThemedText type="smallBold" style={styles.addButtonText}>Add</ThemedText>
-        </Pressable>
+        <Button onPress={submit}>
+          <Text>Add</Text>
+        </Button>
       </View>
 
       <FlatList
         data={friends}
         keyExtractor={(f) => f.id}
         renderItem={renderFriend}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="grow px-4"
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <ThemedText type="subtitle">No friends yet</ThemedText>
-            <ThemedText themeColor="textSecondary" style={styles.emptyText}>
-              Add the people you play with, then tag them when logging rounds. Real accounts
-              and friend requests arrive with the Supabase backend.
-            </ThemedText>
+          <View className="flex-1 items-center justify-center gap-2 p-6">
+            <Text className="text-3xl font-semibold text-foreground">No friends yet</Text>
+            <Text className="text-center text-muted-foreground">
+              Add the people you play with, then tag them when logging rounds. Real accounts and
+              friend requests arrive with the Supabase backend.
+            </Text>
           </View>
         }
       />
-    </ThemedView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  form: { flexDirection: 'row', gap: Spacing.two, padding: Spacing.three },
-  input: { borderRadius: 10, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two + 2, fontSize: 16 },
-  nameInput: { flex: 1 },
-  hcpInput: { width: 70 },
-  addButton: { backgroundColor: '#2E7D32', borderRadius: 10, justifyContent: 'center', paddingHorizontal: Spacing.three },
-  addButtonText: { color: '#fff' },
-  list: { paddingHorizontal: Spacing.three, flexGrow: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two + 2 },
-  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff' },
-  rowText: { flex: 1 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.four },
-  emptyText: { textAlign: 'center' },
-});

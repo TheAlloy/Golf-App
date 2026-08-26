@@ -1,11 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-const GREEN = '#2E7D32';
+import { useThemeColors } from '@/constants/theme';
 
 export default function TabLayout() {
+  const colors = useThemeColors();
+
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: GREEN }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
+        tabBarLabelStyle: { fontFamily: 'Raleway_500Medium' },
+        headerStyle: { backgroundColor: colors.background },
+        headerTitleStyle: { fontFamily: 'Raleway_600SemiBold', color: colors.foreground },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
