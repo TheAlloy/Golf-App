@@ -15,6 +15,8 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 - **Real course data** — 15,667 US courses from the
   [OpenGolfAPI](https://github.com/opengolfapi/data) open dataset, including
   hole-by-hole par and stroke index, plus 60 curated international courses.
+  Full UK/European coverage is one command away — see
+  [docs/course-catalogue.md](docs/course-catalogue.md).
 - **Rounds** — date, 9/18 holes, gross score and to-par, occasion, tags,
   notes, photos, and playing partners.
 - **Scorecards** — optional hole-by-hole entry (strokes, putts, fairway, GIR)
@@ -34,6 +36,21 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
   persisted; the course catalogue is static and bundled
 - **Supabase** (planned): schema and row-level security in
   [`supabase/migrations`](supabase/migrations)
+
+## Course data
+
+The bundled catalogue is US-complete but thin elsewhere, because no open
+dataset covers the UK or Europe. OpenStreetMap does, so there is an importer:
+
+```bash
+npm run catalogue:import -- --region=uk
+npm run catalogue:import -- --region=europe
+npm run catalogue:import -- --region=world
+```
+
+It merges into `src/data/courses.json` without disturbing what is already
+there. Full detail, including why every other source falls short, is in
+[docs/course-catalogue.md](docs/course-catalogue.md).
 
 ## Running it
 
@@ -55,11 +72,12 @@ src/
     round/[id]    round detail with scorecard grid
     course/[id]   course detail
   components/     globe, scorecard entry, ui primitives
-  data/           bundled course catalogue (US dataset + international)
+  data/           courses.json — the generated course catalogue
   lib/            points, stats, heat binning, popularity, supabase
   store/          zustand store (only user data is persisted)
+scripts/               catalogue build + OpenStreetMap importer
 supabase/migrations/   Postgres schema + RLS for the backend
-docs/                  roadmap and course-data provider research
+docs/                  roadmap, catalogue guide, provider research
 ```
 
 ## Data attribution

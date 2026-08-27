@@ -1,26 +1,26 @@
-import { INTERNATIONAL_COURSES } from '@/data/international-courses';
-import US_ROWS from '@/data/us-courses.json';
+import COURSE_ROWS from '@/data/courses.json';
 import { popularityForType } from '@/lib/popularity';
 import { Continent, Course } from '@/models/types';
 
 /**
- * The bundled course catalogue: 15,667 US courses from the OpenGolfAPI open
- * dataset (ODbL) plus a curated international set.
+ * The bundled course catalogue, built by scripts/build-catalogue.mjs and
+ * extended by scripts/import-osm-courses.mjs.
  *
- * Rows are stored as arrays rather than objects to keep the bundle small, and
- * are hydrated into Course objects only when a screen actually needs one. The
- * catalogue is static, so it never goes into the persisted store — only the
- * user's own custom courses do.
+ * Rows are arrays rather than objects to keep the bundle small, and are
+ * hydrated into Course objects only when a screen needs one. The catalogue is
+ * static, so it never goes into the persisted store — only the user's own
+ * custom courses do.
  */
 
-// [id, name, lat, lng, city, state, holes, par, type, holeParsDigits]
-type UsRow = [string, string, number, number, string, string, number, number, string, string];
+// [id, name, lat, lng, city, region, country, continent, holes, par, type, holeParDigits]
+type Row = [
+  string, string, number, number, string, string,
+  string, string, number, number, string, string,
+];
 
-const ROWS = US_ROWS as UsRow[];
+const ROWS = COURSE_ROWS as Row[];
 
-export const US_COURSE_COUNT = ROWS.length;
-export const INTERNATIONAL_COURSE_COUNT = INTERNATIONAL_COURSES.length;
-export const CATALOGUE_COUNT = US_COURSE_COUNT + INTERNATIONAL_COURSE_COUNT;
+export const CATALOGUE_COUNT = ROWS.length;
 
 function parseHolePars(digits: string, holes: number): number[] | undefined {
   if (!digits) return undefined;
@@ -28,15 +28,15 @@ function parseHolePars(digits: string, holes: number): number[] | undefined {
   return pars.length ? pars.slice(0, holes) : undefined;
 }
 
-function hydrateUs(row: UsRow): Course {
-  const [id, name, latitude, longitude, city, region, holes, par, type, parDigits] = row;
+function hydrate(row: Row): Course {
+  const [id, name, latitude, longitude, city, region, country, continent, holes, par, type, parDigits] = row;
   return {
     id,
     name,
     city,
     region,
-    country: 'USA',
-    continent: 'North America',
+    country,
+    continent: continent as Continent,
     coordinate: { latitude, longitude },
     par,
     holes,
@@ -46,57 +46,42 @@ function hydrateUs(row: UsRow): Course {
   };
 }
 
-const INTERNATIONAL: Course[] = INTERNATIONAL_COURSES.map((c) => ({
-  id: c.id,
-  name: c.name,
-  city: c.city,
-  region: '',
-  country: c.country,
-  continent: c.continent,
-  coordinate: { latitude: c.latitude, longitude: c.longitude },
-  par: c.par,
-  holes: c.holes,
-  type: c.type,
-  popularity: popularityForType(c.type, c.holes),
-}));
-
-// id -> row index for US courses; international courses are held hydrated
-// already since there are only a few dozen.
-let usIndex: Map<string, number> | null = null;
-function getUsIndex(): Map<string, number> {
-  if (!usIndex) {
-    usIndex = new Map();
-    for (let i = 0; i < ROWS.length; i++) usIndex.set(ROWS[i][0], i);
+let byId: Map<string, number> | null = null;
+function index(): Map<string, number> {
+  if (!byId) {
+    byId = new Map();
+    for (let i = 0; i < ROWS.length; i++) byId.set(ROWS[i][0], i);
   }
-  return usIndex;
+  return byId;
 }
-
-const INTERNATIONAL_BY_ID = new Map(INTERNATIONAL.map((c) => [c.id, c]));
 
 export function findCatalogueCourse(id: string): Course | undefined {
-  const intl = INTERNATIONAL_BY_ID.get(id);
-  if (intl) return intl;
-  const i = getUsIndex().get(id);
-  return i === undefined ? undefined : hydrateUs(ROWS[i]);
+  const i = index().get(id);
+  return i === undefined ? undefined : hydrate(ROWS[i]);
 }
 
-/** Name/city search across the whole catalogue, international results first. */
+/**
+ * Name and city search. Courses outside the US are ranked first: the US set is
+ * far larger, so without this a search for "Royal" would never surface
+ * anything else.
+ */
 export function searchCatalogue(query: string, limit = 25): Course[] {
   const q = query.trim().toLowerCase();
-  if (!q) return INTERNATIONAL.slice(0, limit);
-
-  const results: Course[] = [];
-  for (const c of INTERNATIONAL) {
-    if (`${c.name} ${c.city} ${c.country}`.toLowerCase().includes(q)) results.push(c);
-    if (results.length >= limit) return results;
+  if (!q) {
+    return ROWS.filter((r) => r[6] !== 'United States of America')
+      .slice(0, limit)
+      .map(hydrate);
   }
+
+  const local: Row[] = [];
+  const us: Row[] = [];
   for (const row of ROWS) {
     if (row[1].toLowerCase().includes(q) || row[4].toLowerCase().includes(q)) {
-      results.push(hydrateUs(row));
-      if (results.length >= limit) break;
+      (row[6] === 'United States of America' ? us : local).push(row);
+      if (local.length >= limit) break;
     }
   }
-  return results;
+  return [...local, ...us].slice(0, limit).map(hydrate);
 }
 
 /** Every course position, for plotting the globe. Cheap: numbers only. */
@@ -104,29 +89,36 @@ export type CoursePoint = { latitude: number; longitude: number };
 
 let points: CoursePoint[] | null = null;
 export function cataloguePoints(): CoursePoint[] {
-  if (!points) {
-    points = ROWS.map((r) => ({ latitude: r[2], longitude: r[3] }));
-    for (const c of INTERNATIONAL) points.push(c.coordinate);
-  }
+  if (!points) points = ROWS.map((r) => ({ latitude: r[2], longitude: r[3] }));
   return points;
 }
 
-export function continentOf(course: Course): Continent {
-  return course.continent;
-}
-
 /** Courses per continent across the whole catalogue. */
+let byContinent: Record<Continent, number> | null = null;
 export function catalogueByContinent(): Record<Continent, number> {
-  const counts: Record<Continent, number> = {
-    'North America': US_COURSE_COUNT,
-    'South America': 0,
-    Europe: 0,
-    Africa: 0,
-    Asia: 0,
-    Australia: 0,
-  };
-  for (const c of INTERNATIONAL) counts[c.continent] += 1;
-  return counts;
+  if (!byContinent) {
+    const counts: Record<Continent, number> = {
+      'North America': 0,
+      'South America': 0,
+      Europe: 0,
+      Africa: 0,
+      Asia: 0,
+      Australia: 0,
+    };
+    for (const r of ROWS) {
+      const c = r[7] as Continent;
+      if (c in counts) counts[c] += 1;
+    }
+    byContinent = counts;
+  }
+  return byContinent;
 }
 
-export { INTERNATIONAL as INTERNATIONAL_CATALOGUE };
+/** Countries represented in the catalogue, with counts, most courses first. */
+export function catalogueByCountry(): { country: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const r of ROWS) counts.set(r[6], (counts.get(r[6]) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([country, count]) => ({ country, count }))
+    .sort((a, b) => b.count - a.count);
+}

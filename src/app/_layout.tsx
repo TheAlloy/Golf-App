@@ -46,6 +46,7 @@ export default function RootLayout() {
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
         <Stack.Screen name="round/[id]" options={{ title: 'Round Details' }} />
         <Stack.Screen name="friends" options={{ title: 'Friends' }} />
+        <Stack.Screen name="coverage" options={{ title: 'Course coverage' }} />
       </Stack>
     </ThemeProvider>
   );

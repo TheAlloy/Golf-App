@@ -111,8 +111,14 @@ export default function ProfileScreen() {
           </View>
         </Pressable>
 
-        <View className="rounded-xl bg-card p-4">
-          <Text className="font-semibold text-sm">Course data</Text>
+        <Pressable
+          className="rounded-xl bg-card p-4"
+          onPress={() => router.push('/coverage')}
+        >
+          <View className="flex-row items-center justify-between">
+            <Text className="font-semibold text-sm">Course coverage</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </View>
           <Text className="mt-1 text-xs text-muted-foreground">
             {CATALOGUE_COUNT.toLocaleString()} courses bundled. US data from the OpenGolfAPI open
             dataset, licensed ODbL.
@@ -122,7 +128,7 @@ export default function ProfileScreen() {
               ? 'Connected to backend.'
               : 'Running local-only — your rounds live on this device until the Supabase backend is connected.'}
           </Text>
-        </View>
+        </Pressable>
       </ScrollView>
     </View>
   );
