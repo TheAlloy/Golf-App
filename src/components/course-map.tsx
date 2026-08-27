@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import MapView, { LongPressEvent, Marker } from 'react-native-maps';
 
-import { MARKER_PLAYED, MARKER_UNPLAYED } from '@/constants/theme';
+import { colors, GLOBE_COLORS } from '@/constants/theme';
 import { Course } from '@/models/types';
 
 type Props = {
@@ -33,7 +33,7 @@ export default function CourseMap({ courses, playedCourseIds }: Props) {
           coordinate={course.coordinate}
           title={course.name}
           description={playedCourseIds.has(course.id) ? 'Played ✓' : 'Not played yet'}
-          pinColor={playedCourseIds.has(course.id) ? MARKER_PLAYED : MARKER_UNPLAYED}
+          pinColor={playedCourseIds.has(course.id) ? GLOBE_COLORS.played : colors.mutedForeground}
           onCalloutPress={() => router.push({ pathname: '/course/[id]', params: { id: course.id } })}
         />
       ))}

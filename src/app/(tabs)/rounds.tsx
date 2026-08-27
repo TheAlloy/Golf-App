@@ -1,49 +1,52 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { FlatList, Pressable, View } from 'react-native';
 
-import { Button } from '@/components/ui/button';
+import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
+import { useThemeColors } from '@/constants/theme';
 import { Round } from '@/models/types';
-import { useAppStore, useCoursesById } from '@/store/use-app-store';
+import { useAppStore, useCourses } from '@/store/use-app-store';
 
 export default function RoundsScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const rounds = useAppStore((s) => s.rounds);
   const friends = useAppStore((s) => s.friends);
-  const coursesById = useCoursesById();
+  const courses = useCourses(rounds.map((r) => r.courseId));
 
   const sorted = [...rounds].sort((a, b) => b.date.localeCompare(a.date));
   const friendName = (fid: string) => friends.find((f) => f.id === fid)?.name ?? 'Unknown';
 
   const renderRound = ({ item: r }: { item: Round }) => {
-    const course = coursesById.get(r.courseId);
+    const course = courses.get(r.courseId);
     return (
       <Pressable
-        className="gap-1 border-b border-border py-4"
-        onPress={() => router.push({ pathname: '/course/[id]', params: { id: r.courseId } })}
+        className="mb-2 flex-row items-center gap-3 rounded-xl bg-card p-3"
+        onPress={() => router.push({ pathname: '/round/[id]', params: { id: r.id } })}
       >
-        <View className="flex-row items-center justify-between">
-          <Text className="font-semibold">{course?.name ?? 'Unknown course'}</Text>
-          <Text className="text-sm text-muted-foreground">{r.date}</Text>
-        </View>
-        <Text className="text-sm text-muted-foreground">
-          {r.holesPlayed} holes
-          {r.score !== undefined ? ` · ${r.score} (${r.toPar! >= 0 ? '+' : ''}${r.toPar})` : ''}
-          {r.playedWith.length > 0 ? ` · with ${r.playedWith.map(friendName).join(', ')}` : ''}
-        </Text>
-        {(r.occasion || r.tags.length > 0) && (
-          <Text className="text-sm text-muted-foreground">
-            {[r.occasion, ...r.tags.map((t) => `#${t}`)].filter(Boolean).join(' · ')}
-          </Text>
-        )}
-        {r.photos.length > 0 && (
-          <View className="mt-1 flex-row gap-2">
-            {r.photos.slice(0, 4).map((uri) => (
-              <Image key={uri} source={{ uri }} style={{ width: 56, height: 56, borderRadius: 8 }} />
-            ))}
+        {r.photos[0] ? (
+          <Image source={{ uri: r.photos[0] }} style={{ width: 56, height: 56, borderRadius: 10 }} />
+        ) : (
+          <View className="h-14 w-14 items-center justify-center rounded-lg bg-elevated">
+            <Ionicons name="golf-outline" size={20} color={colors.mutedForeground} />
           </View>
         )}
+        <View className="flex-1">
+          <Text className="font-semibold text-sm">{course?.name ?? 'Unknown course'}</Text>
+          <Text className="text-xs text-muted-foreground">
+            {[course?.city, course?.region || course?.country].filter(Boolean).join(', ')}
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            {r.date} · {r.holesPlayed} holes
+            {r.playedWith.length > 0 ? ` · with ${r.playedWith.map(friendName).join(', ')}` : ''}
+          </Text>
+        </View>
+        <View className="items-end">
+          <Text className="font-bold text-xl text-foreground">{r.score ?? '—'}</Text>
+          <ScoreBadge toPar={r.toPar} />
+        </View>
       </Pressable>
     );
   };
@@ -54,19 +57,20 @@ export default function RoundsScreen() {
         data={sorted}
         keyExtractor={(r) => r.id}
         renderItem={renderRound}
-        contentContainerClassName="grow p-4"
+        contentContainerClassName="grow p-4 pt-16"
+        ListHeaderComponent={
+          <Text className="mb-4 font-bold text-3xl text-foreground">Rounds</Text>
+        }
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center gap-2 p-6">
-            <Text className="text-3xl font-semibold text-foreground">No rounds yet</Text>
+            <Ionicons name="golf-outline" size={40} color={colors.mutedForeground} />
+            <Text className="font-semibold text-xl text-foreground">No rounds yet</Text>
             <Text className="text-center text-muted-foreground">
-              Log your first round to start filling in the map and earning rarity points.
+              Log your first round to light up the globe and start earning rarity points.
             </Text>
           </View>
         }
       />
-      <Button className="absolute bottom-6 right-4 shadow-lg" onPress={() => router.push('/log-round')}>
-        <Text>+ Log round</Text>
-      </Button>
     </View>
   );
 }

@@ -4,11 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
+import ScorecardEntry from '@/components/scorecard-entry';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/cn';
-import { useAppStore } from '@/store/use-app-store';
+import { searchCatalogue } from '@/data/course-catalogue';
+import { scorecardTotal } from '@/lib/stats';
+import { HoleScore } from '@/models/types';
+import { useAppStore, useCourse } from '@/store/use-app-store';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -17,7 +21,7 @@ function todayIso(): string {
 export default function LogRoundScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ courseId?: string }>();
-  const courses = useAppStore((s) => s.courses);
+  const customCourses = useAppStore((s) => s.customCourses);
   const friends = useAppStore((s) => s.friends);
   const addRound = useAppStore((s) => s.addRound);
 
@@ -31,16 +35,18 @@ export default function LogRoundScreen() {
   const [notes, setNotes] = useState('');
   const [playedWith, setPlayedWith] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [showScorecard, setShowScorecard] = useState(false);
+  const [holeScores, setHoleScores] = useState<HoleScore[]>([]);
 
-  const selectedCourse = courses.find((c) => c.id === courseId);
+  const selectedCourse = useCourse(courseId);
   const courseMatches = useMemo(() => {
     if (selectedCourse) return [];
     const q = courseQuery.trim().toLowerCase();
-    const list = q
-      ? courses.filter((c) => `${c.name} ${c.city} ${c.country}`.toLowerCase().includes(q))
-      : courses;
-    return list.slice(0, 8);
-  }, [courses, courseQuery, selectedCourse]);
+    const mine = q
+      ? customCourses.filter((c) => `${c.name} ${c.city}`.toLowerCase().includes(q))
+      : customCourses;
+    return [...mine, ...searchCatalogue(courseQuery, 10)].slice(0, 12);
+  }, [courseQuery, customCourses, selectedCourse]);
 
   const togglePartner = (friendId: string) =>
     setPlayedWith((ids) =>
@@ -65,7 +71,8 @@ export default function LogRoundScreen() {
       Alert.alert('Check the date', 'Use the format YYYY-MM-DD.');
       return;
     }
-    const gross = score ? Number(score) : undefined;
+    // A filled-in scorecard is the more reliable figure, so it wins.
+    const gross = scorecardTotal(holeScores) ?? (score ? Number(score) : undefined);
     const par = holesPlayed === 18 ? selectedCourse.par : Math.round(selectedCourse.par / 2);
     addRound({
       courseId: selectedCourse.id,
@@ -78,6 +85,7 @@ export default function LogRoundScreen() {
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       playedWith,
       photos,
+      holeScores: holeScores.some((h) => h?.strokes !== undefined) ? holeScores : undefined,
     });
     router.back();
   };
@@ -110,7 +118,7 @@ export default function LogRoundScreen() {
               <Pressable key={c.id} className="px-1 py-2" onPress={() => setCourseId(c.id)}>
                 <Text>{c.name}</Text>
                 <Text className="text-sm text-muted-foreground">
-                  {[c.city, c.country].filter(Boolean).join(', ')}
+                  {[c.city, c.region || c.country].filter(Boolean).join(', ')}
                 </Text>
               </Pressable>
             ))}
@@ -185,6 +193,30 @@ export default function LogRoundScreen() {
             <Text className="text-sm">+ Add photo</Text>
           </Pressable>
         </View>
+
+        <Pressable
+          className="mt-2 flex-row items-center justify-between rounded-lg bg-card p-3"
+          onPress={() => setShowScorecard((v) => !v)}
+        >
+          <View>
+            <Text className="font-semibold text-sm">Scorecard</Text>
+            <Text className="text-xs text-muted-foreground">
+              {scorecardTotal(holeScores) !== undefined
+                ? `${scorecardTotal(holeScores)} strokes entered`
+                : 'Optional \u2014 unlocks fairways, GIR and putts stats'}
+            </Text>
+          </View>
+          <Text className="text-sm text-primary">{showScorecard ? 'Hide' : 'Add'}</Text>
+        </Pressable>
+
+        {showScorecard && (
+          <ScorecardEntry
+            holes={holesPlayed}
+            pars={selectedCourse?.holePars}
+            value={holeScores}
+            onChange={setHoleScores}
+          />
+        )}
 
         <Text className="font-semibold text-sm">Notes</Text>
         <Input

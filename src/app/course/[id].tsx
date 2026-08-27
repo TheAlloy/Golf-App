@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { coursePoints, repeatPlayPoints } from '@/lib/points';
-import { useAppStore } from '@/store/use-app-store';
+import { useAppStore, useCourse } from '@/store/use-app-store';
 
 export default function CourseDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const course = useAppStore((s) => s.courses.find((c) => c.id === id));
+  const course = useCourse(id);
   const rounds = useAppStore((s) => s.rounds).filter((r) => r.courseId === id);
   const friends = useAppStore((s) => s.friends);
 
@@ -34,7 +34,7 @@ export default function CourseDetailScreen() {
       <ScrollView contentContainerClassName="gap-2 p-4">
         <Text className="text-3xl font-semibold text-foreground">{course.name}</Text>
         <Text className="text-muted-foreground">
-          {[course.city, course.country].filter(Boolean).join(', ')}
+          {[course.city, course.region || course.country].filter(Boolean).join(', ')}
         </Text>
 
         <View className="my-2 flex-row gap-6">

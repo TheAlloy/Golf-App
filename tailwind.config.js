@@ -42,6 +42,9 @@ module.exports = {
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
         },
+        elevated: 'hsl(var(--card-elevated))',
+        info: 'hsl(var(--info))',
+        warm: 'hsl(var(--warm))',
       },
       // React Native has no font synthesis, so each weight is its own family.
       fontFamily: {

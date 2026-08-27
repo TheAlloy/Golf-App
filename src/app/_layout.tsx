@@ -7,17 +7,15 @@ import {
   Raleway_700Bold,
   useFonts,
 } from '@expo-google-fonts/raleway';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 
 import { useThemeColors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const colors = useThemeColors();
   const [fontsLoaded] = useFonts({
     Raleway_400Regular,
@@ -33,7 +31,7 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DarkTheme}>
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },
@@ -46,6 +44,8 @@ export default function RootLayout() {
         <Stack.Screen name="log-round" options={{ presentation: 'modal', title: 'Log a round' }} />
         <Stack.Screen name="add-course" options={{ presentation: 'modal', title: 'Add a course' }} />
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
+        <Stack.Screen name="round/[id]" options={{ title: 'Round Details' }} />
+        <Stack.Screen name="friends" options={{ title: 'Friends' }} />
       </Stack>
     </ThemeProvider>
   );
