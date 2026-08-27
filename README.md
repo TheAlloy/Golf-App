@@ -9,9 +9,10 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 
 ## What's built
 
-- **Globe** — an orthographic world globe (d3-geo + SVG) with 15,700+ courses
-  drawn as a density heat map, your played courses picked out in the accent
-  colour, per-continent counts, and drag-to-spin.
+- **Globe** — the whole app. An orthographic world globe (d3-geo + SVG) that
+  starts dark and lights up only where you have played: each area you know
+  glows further along a heat ramp the more courses you tick off there. Drag to
+  spin, pinch or use the controls to zoom, tap a glow to open the course.
 - **Real course data** — 15,667 US courses from the
   [OpenGolfAPI](https://github.com/opengolfapi/data) open dataset, including
   hole-by-hole par and stroke index, plus 60 curated international courses.
@@ -19,9 +20,12 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
   [docs/course-catalogue.md](docs/course-catalogue.md).
 - **Rounds** — date, 9/18 holes, gross score and to-par, occasion, tags,
   notes, photos, and playing partners.
-- **Scorecards** — optional hole-by-hole entry (strokes, putts, fairway, GIR)
-  that feeds the stats screens. A filled card overrides the typed total.
-- **Stats** — fairways hit, greens in regulation, putts per hole, best rounds.
+- **Rounds** — log a final score, or go hole by hole with strokes, putts and
+  fairways. Greens in regulation are calculated, not asked for.
+- **Stats** — fairways, GIR, putts per hole, achievements and friends.
+- **Handicap** — derived from your rounds using the World Handicap System's
+  method (best 8 of the last 20), with score-against-par standing in for the
+  licensed course rating and slope.
 - **Rarity points** — a course is worth `10 + (100 − popularity)` on first
   play, repeats 10%. Popularity is derived from access type until the app has
   real play counts to aggregate (see `src/lib/popularity.ts`).
@@ -67,8 +71,10 @@ the globe renders on web; only the course pin map is native-only.
 ```
 src/
   app/            expo-router screens
-    (tabs)/       home (globe), rounds, play, stats, profile
-    log-round.tsx modal: log a round, with optional scorecard
+    index.tsx     the globe — the home screen
+    stats.tsx     shot quality, achievements, friends
+    profile.tsx   calculated handicap and totals
+    log-round.tsx modal: final score or hole by hole
     round/[id]    round detail with scorecard grid
     course/[id]   course detail
   components/     globe, scorecard entry, ui primitives

@@ -11,12 +11,11 @@ import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
-import { useThemeColors } from '@/constants/theme';
+import { colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colors = useThemeColors();
   const [fontsLoaded] = useFonts({
     Raleway_400Regular,
     Raleway_500Medium,
@@ -40,13 +39,16 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="stats" options={{ title: 'Stats' }} />
+        <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+        <Stack.Screen name="rounds" options={{ title: 'Rounds' }} />
+        <Stack.Screen name="friends" options={{ title: 'Friends' }} />
+        <Stack.Screen name="coverage" options={{ title: 'Course coverage' }} />
         <Stack.Screen name="log-round" options={{ presentation: 'modal', title: 'Log a round' }} />
         <Stack.Screen name="add-course" options={{ presentation: 'modal', title: 'Add a course' }} />
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
-        <Stack.Screen name="round/[id]" options={{ title: 'Round Details' }} />
-        <Stack.Screen name="friends" options={{ title: 'Friends' }} />
-        <Stack.Screen name="coverage" options={{ title: 'Course coverage' }} />
+        <Stack.Screen name="round/[id]" options={{ title: 'Round' }} />
       </Stack>
     </ThemeProvider>
   );

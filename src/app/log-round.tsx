@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,11 +9,14 @@ import ScorecardEntry from '@/components/scorecard-entry';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { cn } from '@/lib/cn';
+import { colors } from '@/constants/theme';
 import { searchCatalogue } from '@/data/course-catalogue';
+import { cn } from '@/lib/cn';
 import { scorecardTotal } from '@/lib/stats';
 import { HoleScore } from '@/models/types';
 import { useAppStore, useCourse } from '@/store/use-app-store';
+
+type Mode = 'score' | 'holes';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -29,13 +33,13 @@ export default function LogRoundScreen() {
   const [courseQuery, setCourseQuery] = useState('');
   const [date, setDate] = useState(todayIso());
   const [holesPlayed, setHolesPlayed] = useState<9 | 18>(18);
+  const [mode, setMode] = useState<Mode>('score');
   const [score, setScore] = useState('');
   const [occasion, setOccasion] = useState('');
   const [tags, setTags] = useState('');
   const [notes, setNotes] = useState('');
   const [playedWith, setPlayedWith] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
-  const [showScorecard, setShowScorecard] = useState(false);
   const [holeScores, setHoleScores] = useState<HoleScore[]>([]);
 
   const selectedCourse = useCourse(courseId);
@@ -47,6 +51,13 @@ export default function LogRoundScreen() {
       : customCourses;
     return [...mine, ...searchCatalogue(courseQuery, 10)].slice(0, 12);
   }, [courseQuery, customCourses, selectedCourse]);
+
+  const cardTotal = scorecardTotal(holeScores);
+  const par = selectedCourse
+    ? holesPlayed === 18
+      ? selectedCourse.par
+      : Math.round(selectedCourse.par / 2)
+    : undefined;
 
   const togglePartner = (friendId: string) =>
     setPlayedWith((ids) =>
@@ -71,21 +82,31 @@ export default function LogRoundScreen() {
       Alert.alert('Check the date', 'Use the format YYYY-MM-DD.');
       return;
     }
-    // A filled-in scorecard is the more reliable figure, so it wins.
-    const gross = scorecardTotal(holeScores) ?? (score ? Number(score) : undefined);
-    const par = holesPlayed === 18 ? selectedCourse.par : Math.round(selectedCourse.par / 2);
+
+    // In hole-by-hole mode the card is the score; otherwise take the typed total.
+    const gross = mode === 'holes' ? cardTotal : score ? Number(score) : undefined;
+    if (gross === undefined) {
+      Alert.alert(
+        'Add a score',
+        mode === 'holes' ? 'Enter at least one hole.' : 'Enter your total score for the round.'
+      );
+      return;
+    }
+
     addRound({
       courseId: selectedCourse.id,
       date,
       holesPlayed,
       score: gross,
-      toPar: gross !== undefined ? gross - par : undefined,
+      toPar: par !== undefined ? gross - par : undefined,
       occasion: occasion.trim() || undefined,
       notes: notes.trim() || undefined,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       playedWith,
       photos,
-      holeScores: holeScores.some((h) => h?.strokes !== undefined) ? holeScores : undefined,
+      holeScores: mode === 'holes' && holeScores.some((h) => h?.strokes !== undefined)
+        ? holeScores
+        : undefined,
     });
     router.back();
   };
@@ -109,7 +130,12 @@ export default function LogRoundScreen() {
             }}
           >
             <Text>{selectedCourse.name}</Text>
-            <Text className="text-sm text-muted-foreground">Tap to change</Text>
+            <Text className="text-sm text-muted-foreground">
+              {[selectedCourse.city, selectedCourse.region || selectedCourse.country]
+                .filter(Boolean)
+                .join(', ')}{' '}
+              · Par {selectedCourse.par}
+            </Text>
           </Pressable>
         ) : (
           <>
@@ -125,15 +151,18 @@ export default function LogRoundScreen() {
           </>
         )}
 
-        <Text className="font-semibold text-sm">Date</Text>
+        <Text className="mt-2 font-semibold text-sm">Date</Text>
         <Input value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
 
-        <Text className="font-semibold text-sm">Holes</Text>
+        <Text className="mt-2 font-semibold text-sm">Holes</Text>
         <View className="flex-row flex-wrap items-center gap-2">
           {([9, 18] as const).map((h) => (
             <Pressable key={h} className={chip(holesPlayed === h)} onPress={() => setHolesPlayed(h)}>
               <Text
-                className={cn('text-sm', holesPlayed === h ? 'text-primary-foreground' : 'text-foreground')}
+                className={cn(
+                  'text-sm',
+                  holesPlayed === h ? 'text-primary-foreground' : 'text-foreground'
+                )}
               >
                 {h} holes
               </Text>
@@ -141,13 +170,84 @@ export default function LogRoundScreen() {
           ))}
         </View>
 
-        <Text className="font-semibold text-sm">Score (gross)</Text>
-        <Input value={score} onChangeText={setScore} keyboardType="number-pad" placeholder="e.g. 84" />
+        {/* How much detail to record */}
+        <Text className="mt-2 font-semibold text-sm">Scoring</Text>
+        <View className="flex-row rounded-xl bg-card p-1">
+          {(
+            [
+              ['score', 'Final score', 'Quickest'],
+              ['holes', 'Hole by hole', 'Unlocks stats'],
+            ] as const
+          ).map(([m, label, hint]) => (
+            <Pressable
+              key={m}
+              className={cn(
+                'flex-1 items-center rounded-lg py-2',
+                mode === m ? 'bg-elevated' : 'bg-transparent'
+              )}
+              onPress={() => setMode(m)}
+            >
+              <Text
+                className={cn(
+                  'font-semibold text-sm',
+                  mode === m ? 'text-foreground' : 'text-muted-foreground'
+                )}
+              >
+                {label}
+              </Text>
+              <Text className="text-[10px] text-muted-foreground">{hint}</Text>
+            </Pressable>
+          ))}
+        </View>
 
-        <Text className="font-semibold text-sm">Played with</Text>
+        {mode === 'score' ? (
+          <>
+            <Input
+              value={score}
+              onChangeText={setScore}
+              keyboardType="number-pad"
+              placeholder={par ? `e.g. ${par + 12}` : 'e.g. 84'}
+            />
+            {par !== undefined && score !== '' && Number(score) > 0 && (
+              <Text className="text-xs text-muted-foreground">
+                {Number(score) - par === 0
+                  ? 'Level par'
+                  : `${Number(score) - par > 0 ? '+' : ''}${Number(score) - par} to par`}
+              </Text>
+            )}
+          </>
+        ) : (
+          <>
+            <View className="flex-row items-center justify-between rounded-lg bg-card p-3">
+              <Text className="text-sm text-muted-foreground">
+                {cardTotal !== undefined ? 'Card total' : 'Tap through the holes below'}
+              </Text>
+              {cardTotal !== undefined && (
+                <Text className="font-bold text-lg text-primary">{cardTotal}</Text>
+              )}
+            </View>
+            {!selectedCourse?.holePars && (
+              <View className="flex-row items-start gap-2 rounded-lg bg-card p-3">
+                <Ionicons name="information-circle" size={16} color={colors.info} />
+                <Text className="flex-1 text-xs text-muted-foreground">
+                  This course has no hole-by-hole par on file, so greens in regulation cannot be
+                  worked out. Scores, putts and fairways will still be recorded.
+                </Text>
+              </View>
+            )}
+            <ScorecardEntry
+              holes={holesPlayed}
+              pars={selectedCourse?.holePars}
+              value={holeScores}
+              onChange={setHoleScores}
+            />
+          </>
+        )}
+
+        <Text className="mt-2 font-semibold text-sm">Played with</Text>
         {friends.length === 0 ? (
           <Text className="text-sm text-muted-foreground">
-            Add friends in the Friends tab to tag playing partners.
+            Add friends from Stats to tag playing partners.
           </Text>
         ) : (
           <View className="flex-row flex-wrap items-center gap-2">
@@ -170,21 +270,13 @@ export default function LogRoundScreen() {
           </View>
         )}
 
-        <Text className="font-semibold text-sm">Occasion</Text>
-        <Input
-          value={occasion}
-          onChangeText={setOccasion}
-          placeholder="e.g. Birthday trip, society day"
-        />
+        <Text className="mt-2 font-semibold text-sm">Occasion</Text>
+        <Input value={occasion} onChangeText={setOccasion} placeholder="e.g. Society day" />
 
-        <Text className="font-semibold text-sm">Tags</Text>
-        <Input
-          value={tags}
-          onChangeText={setTags}
-          placeholder="links, windy, stag-do (comma separated)"
-        />
+        <Text className="mt-2 font-semibold text-sm">Tags</Text>
+        <Input value={tags} onChangeText={setTags} placeholder="links, windy (comma separated)" />
 
-        <Text className="font-semibold text-sm">Photos</Text>
+        <Text className="mt-2 font-semibold text-sm">Photos</Text>
         <View className="flex-row flex-wrap items-center gap-2">
           {photos.map((uri) => (
             <Image key={uri} source={{ uri }} style={{ width: 56, height: 56, borderRadius: 8 }} />
@@ -194,38 +286,14 @@ export default function LogRoundScreen() {
           </Pressable>
         </View>
 
-        <Pressable
-          className="mt-2 flex-row items-center justify-between rounded-lg bg-card p-3"
-          onPress={() => setShowScorecard((v) => !v)}
-        >
-          <View>
-            <Text className="font-semibold text-sm">Scorecard</Text>
-            <Text className="text-xs text-muted-foreground">
-              {scorecardTotal(holeScores) !== undefined
-                ? `${scorecardTotal(holeScores)} strokes entered`
-                : 'Optional \u2014 unlocks fairways, GIR and putts stats'}
-            </Text>
-          </View>
-          <Text className="text-sm text-primary">{showScorecard ? 'Hide' : 'Add'}</Text>
-        </Pressable>
-
-        {showScorecard && (
-          <ScorecardEntry
-            holes={holesPlayed}
-            pars={selectedCourse?.holePars}
-            value={holeScores}
-            onChange={setHoleScores}
-          />
-        )}
-
-        <Text className="font-semibold text-sm">Notes</Text>
+        <Text className="mt-2 font-semibold text-sm">Notes</Text>
         <Input
           className="h-24 py-3"
           value={notes}
           onChangeText={setNotes}
           multiline
           textAlignVertical="top"
-          placeholder="Best shot, conditions, who won the money…"
+          placeholder="Conditions, best shot, who won the money…"
         />
 
         <Button className="mt-4" onPress={save}>

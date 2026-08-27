@@ -45,16 +45,21 @@ export function useThemeColors(): ThemeColors {
 }
 
 /**
- * Heat ramp for the globe: courses you have played glow warmer as the count
- * in that area rises, matching the city-lights look of the design.
+ * Heat ramp for the globe. A region glows further along the ramp the more
+ * courses you have played there: indigo for a first visit, magenta as it
+ * fills in, amber for a home patch you know inside out.
  */
-export const HEAT_RAMP = ['hsl(246, 80%, 60%)', 'hsl(291, 70%, 62%)', 'hsl(33, 96%, 58%)'];
+export const HEAT_STOPS = ['hsl(248, 84%, 62%)', 'hsl(295, 78%, 60%)', 'hsl(35, 98%, 60%)'];
 
 export const GLOBE_COLORS = {
-  ocean: 'hsl(222, 45%, 7%)',
-  land: 'hsl(215, 24%, 21%)',
-  landStroke: 'hsl(210, 22%, 32%)',
-  graticule: 'hsl(222, 26%, 13%)',
-  atmosphere: 'hsl(205, 90%, 60%)',
-  played: 'hsl(82, 78%, 55%)',
+  oceanHigh: 'hsl(222, 46%, 13%)',
+  ocean: 'hsl(223, 48%, 8%)',
+  oceanDeep: 'hsl(226, 56%, 4%)',
+  land: 'hsl(217, 28%, 18%)',
+  landStroke: 'hsl(212, 26%, 28%)',
+  graticule: 'hsl(220, 30%, 14%)',
+  atmosphere: 'hsl(206, 92%, 62%)',
+  limb: 'hsl(203, 90%, 72%)',
+  pin: 'hsl(82, 78%, 58%)',
+  pinLabel: 'hsl(210, 24%, 88%)',
 };

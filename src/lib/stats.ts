@@ -9,8 +9,20 @@ export type AggregateStats = {
   holesWithPutts: number;
 };
 
-/** Roll up the hole-by-hole detail across every round that has a scorecard. */
-export function aggregateStats(rounds: Round[]): AggregateStats {
+/**
+ * Green in regulation: on the putting surface with two putts left to make par,
+ * i.e. strokes - putts <= par - 2. Derived rather than entered, since every
+ * input it needs is already on the card.
+ */
+export function girForHole(hole: HoleScore | undefined, par: number | undefined): boolean {
+  if (!hole || hole.strokes === undefined || hole.putts === undefined || par === undefined) {
+    return false;
+  }
+  return hole.strokes - hole.putts <= par - 2;
+}
+
+/** Roll up hole-by-hole detail across every round that has a scorecard. */
+export function aggregateStats(rounds: Round[], pars?: Map<string, number[] | undefined>): AggregateStats {
   const totals: AggregateStats = {
     fairwaysHit: 0,
     fairwayChances: 0,
@@ -21,20 +33,24 @@ export function aggregateStats(rounds: Round[]): AggregateStats {
   };
 
   for (const round of rounds) {
-    for (const hole of round.holeScores ?? []) {
+    const holePars = pars?.get(round.courseId);
+    (round.holeScores ?? []).forEach((hole, i) => {
+      if (!hole) return;
+      const par = holePars?.[i];
+
       if (hole.fairwayHit !== undefined) {
         totals.fairwayChances += 1;
         if (hole.fairwayHit) totals.fairwaysHit += 1;
-      }
-      if (hole.gir !== undefined) {
-        totals.girChances += 1;
-        if (hole.gir) totals.greensInRegulation += 1;
       }
       if (hole.putts !== undefined) {
         totals.putts += hole.putts;
         totals.holesWithPutts += 1;
       }
-    }
+      if (hole.strokes !== undefined && hole.putts !== undefined && par !== undefined) {
+        totals.girChances += 1;
+        if (girForHole(hole, par)) totals.greensInRegulation += 1;
+      }
+    });
   }
 
   return totals;

@@ -33,7 +33,7 @@ export default function CourseMap({ courses, playedCourseIds }: Props) {
           coordinate={course.coordinate}
           title={course.name}
           description={playedCourseIds.has(course.id) ? 'Played ✓' : 'Not played yet'}
-          pinColor={playedCourseIds.has(course.id) ? GLOBE_COLORS.played : colors.mutedForeground}
+          pinColor={playedCourseIds.has(course.id) ? GLOBE_COLORS.pin : colors.mutedForeground}
           onCalloutPress={() => router.push({ pathname: '/course/[id]', params: { id: course.id } })}
         />
       ))}
