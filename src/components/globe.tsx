@@ -1,6 +1,6 @@
 import { geoDistance, geoGraticule10, geoOrthographic, geoPath } from 'd3-geo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GestureResponderEvent, PanResponder, View } from 'react-native';
+import { GestureResponderEvent, PanResponder, Platform, View } from 'react-native';
 import Svg, {
   Circle,
   ClipPath,
@@ -80,6 +80,16 @@ export default function Globe({
   // Once the user drags, the globe is theirs and never re-centres itself.
   const userDriving = useRef(false);
   const pinchStart = useRef<{ distance: number; zoom: number } | null>(null);
+  // Set once a gesture has used two fingers, so its end is never read as a tap.
+  const pinched = useRef(false);
+  // Drag offset at the moment a pinch dropped back to one finger, so the
+  // remaining finger carries on from where the globe is rather than jumping.
+  const dragOrigin = useRef({ dx: 0, dy: 0 });
+  const container = useRef<View>(null);
+  const sizeRef = useRef({ width, height });
+  // Where the globe's canvas sits in the window, so finger positions (page
+  // coordinates) can be turned into canvas coordinates.
+  const offsetRef = useRef({ x: 0, y: 0 });
   const moved = useRef(0);
   const spanRef = useRef(Math.min(width, height));
   const zoomRef = useRef(zoom);
@@ -88,6 +98,7 @@ export default function Globe({
 
   useEffect(() => {
     spanRef.current = Math.min(width, height);
+    sizeRef.current = { width, height };
     zoomRef.current = zoom;
     onZoomRef.current = onZoomChange;
   }, [height, onZoomChange, width, zoom]);
@@ -139,6 +150,44 @@ export default function Globe({
     setRotation(next);
   }, [initialCentre]);
 
+  /**
+   * Zoom to `next` while keeping whatever is under (fx, fy) in place, so a
+   * pinch over Scotland zooms into Scotland rather than the middle of the
+   * screen. Off the globe, it zooms about the centre.
+   */
+  const zoomAt = useCallback((next: number, fx: number, fy: number) => {
+    const { width: w, height: h } = sizeRef.current;
+    const project = (z: number, rot: [number, number]) =>
+      geoOrthographic()
+        .scale((Math.min(w, h) / 2 - 2) * z)
+        .translate([w / 2, h / 2])
+        .rotate(rot)
+        .clipAngle(90);
+
+    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
+    let rot = rotationRef.current;
+    const target = project(zoomRef.current, rot).invert?.([fx, fy]);
+    if (target) {
+      // Two passes of "rotate by the error" converge well for small steps.
+      for (let i = 0; i < 2; i++) {
+        const now = project(clamped, rot).invert?.([fx, fy]);
+        if (!now) break;
+        rot = [rot[0] - (target[0] - now[0]), Math.max(-85, Math.min(85, rot[1] - (target[1] - now[1])))];
+      }
+      rotationRef.current = rot;
+      gestureStart.current = rot;
+      setRotation(rot);
+    }
+    userDriving.current = true;
+    zoomRef.current = clamped;
+    onZoomRef.current?.(clamped);
+  }, []);
+
+  const zoomAtRef = useRef(zoomAt);
+  useEffect(() => {
+    zoomAtRef.current = zoomAt;
+  }, [zoomAt]);
+
   const [panHandlers, setPanHandlers] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
@@ -149,44 +198,106 @@ export default function Globe({
         userDriving.current = true;
         gestureStart.current = rotationRef.current;
         pinchStart.current = null;
+        pinched.current = e.nativeEvent.touches.length > 1;
+        dragOrigin.current = { dx: 0, dy: 0 };
         moved.current = 0;
-        void e;
+        const el = container.current as unknown as HTMLElement | View | null;
+        if (Platform.OS === 'web') {
+          const rect = (el as HTMLElement | null)?.getBoundingClientRect?.();
+          if (rect) offsetRef.current = { x: rect.left, y: rect.top };
+        } else {
+          (el as View | null)?.measureInWindow?.((x, y) => (offsetRef.current = { x, y }));
+        }
       },
       onPanResponderMove: (e, g) => {
         const touches = e.nativeEvent.touches;
         moved.current = Math.max(moved.current, Math.abs(g.dx) + Math.abs(g.dy));
 
-        if (touches.length === 2) {
+        if (touches.length >= 2) {
+          pinched.current = true;
           const [a, b] = touches;
           const distance = Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
           if (!pinchStart.current) {
             pinchStart.current = { distance, zoom: zoomRef.current };
             return;
           }
-          const next = Math.min(
-            MAX_ZOOM,
-            Math.max(MIN_ZOOM, (pinchStart.current.zoom * distance) / pinchStart.current.distance)
+          const fx = (a.pageX + b.pageX) / 2 - offsetRef.current.x;
+          const fy = (a.pageY + b.pageY) / 2 - offsetRef.current.y;
+          zoomAtRef.current(
+            (pinchStart.current.zoom * distance) / pinchStart.current.distance,
+            fx,
+            fy
           );
-          onZoomRef.current?.(next);
           return;
         }
 
-        pinchStart.current = null;
+        if (pinchStart.current) {
+          // Back to one finger after a pinch: restart the drag from here.
+          pinchStart.current = null;
+          gestureStart.current = rotationRef.current;
+          dragOrigin.current = { dx: g.dx, dy: g.dy };
+          return;
+        }
         const [l0, p0] = gestureStart.current;
+        const dx = g.dx - dragOrigin.current.dx;
+        const dy = g.dy - dragOrigin.current.dy;
         // Slow the drag as you zoom in, so a close-up stays controllable.
         const speed = 180 / zoomRef.current;
-        const lambda = l0 + (g.dx / spanRef.current) * speed;
-        const phi = Math.max(-85, Math.min(85, p0 - (g.dy / spanRef.current) * speed));
+        const lambda = l0 + (dx / spanRef.current) * speed;
+        const phi = Math.max(-85, Math.min(85, p0 - (dy / spanRef.current) * speed));
         rotationRef.current = [lambda, phi];
         setRotation([lambda, phi]);
       },
       onPanResponderRelease: (e) => {
         // A press that barely moved is a tap, not a drag.
-        if (moved.current < 6) tapRef.current?.(e);
+        if (moved.current < 6 && !pinched.current) tapRef.current?.(e);
         pinchStart.current = null;
+        pinched.current = false;
       },
     });
     setPanHandlers(responder.panHandlers as unknown as Record<string, unknown>);
+  }, []);
+
+  // In a browser, a trackpad pinch arrives as ctrl+wheel (Safari sends its own
+  // gesture events instead) and would otherwise zoom the whole page. Claim
+  // both, plus the plain scroll wheel, for the globe.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = container.current as unknown as HTMLElement | null;
+    if (!el) return;
+    let focus = { x: 0, y: 0 };
+    const setFocus = (e: { clientX: number; clientY: number }) => {
+      const rect = el.getBoundingClientRect();
+      focus = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+    const zoomBy = (factor: number) => zoomAtRef.current(zoomRef.current * factor, focus.x, focus.y);
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setFocus(e);
+      // Pinch deltas are small and fine-grained; wheel notches are large.
+      zoomBy(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
+    };
+    let gestureScale = 1;
+    const onGestureStart = (e: Event) => {
+      e.preventDefault();
+      setFocus(e as unknown as MouseEvent);
+      gestureScale = 1;
+    };
+    const onGestureChange = (e: Event) => {
+      e.preventDefault();
+      const scaleNow = (e as unknown as { scale: number }).scale;
+      zoomBy(scaleNow / gestureScale);
+      gestureScale = scaleNow;
+    };
+    el.style.touchAction = 'none';
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('gesturestart', onGestureStart);
+    el.addEventListener('gesturechange', onGestureChange);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('gesturestart', onGestureStart);
+      el.removeEventListener('gesturechange', onGestureChange);
+    };
   }, []);
 
   const { landPaths, graticulePath, blobs, pins } = useMemo(() => {
@@ -241,7 +352,7 @@ export default function Globe({
   }, [cells, markers, projection, rotation, zoom]);
 
   return (
-    <View {...(panHandlers ?? {})}>
+    <View ref={container} {...(panHandlers ?? {})}>
       <Svg width={width} height={height}>
         <Defs>
           <RadialGradient id="ocean" cx="38%" cy="32%" r="72%">

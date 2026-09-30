@@ -14,7 +14,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 - **Globe** (Home) — an orthographic world globe (d3-geo + SVG) that
   starts dark and lights up only where you have played: each area you know
   glows further along a heat ramp the more courses you tick off there. Drag to
-  spin, pinch or use the controls to zoom, tap a glow to open the course.
+  spin, pinch (or trackpad-pinch in a browser) to zoom into the spot under your fingers, tap a glow to open the course.
 - **Real course data** — 15,667 US courses from the
   [OpenGolfAPI](https://github.com/opengolfapi/data) open dataset, including
   hole-by-hole par and stroke index, plus 60 curated international courses.

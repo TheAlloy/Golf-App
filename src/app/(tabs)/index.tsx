@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Globe, { GlobeMarker, MAX_ZOOM, MIN_ZOOM } from '@/components/globe';
+import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { Text } from '@/components/ui/text';
 import { colors, HEAT_STOPS } from '@/constants/theme';
@@ -111,19 +111,6 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {/* Empty state: the world stays dark until something is logged. */}
-      {empty && (
-        <View className="absolute left-4 right-20" style={{ bottom: tabSpace + 16 }}>
-          <Text className="font-semibold text-base text-foreground">
-            Your world is dark
-          </Text>
-          <Text className="mt-1 text-sm text-muted-foreground">
-            Tap + to log a round and the place you played lights up. The more you play somewhere, the
-            brighter it burns.
-          </Text>
-        </View>
-      )}
-
       {/* Heat legend, only meaningful once there is heat */}
       {!empty && (
         <View
@@ -143,40 +130,6 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Zoom controls */}
-      <View className="absolute right-4 gap-2" style={{ bottom: tabSpace + 16 }}>
-        <ToolbarButton
-          icon="add"
-          onPress={() => setZoom((z) => Math.min(MAX_ZOOM, z * 1.6))}
-          disabled={zoom >= MAX_ZOOM}
-        />
-        <ToolbarButton
-          icon="remove"
-          onPress={() => setZoom((z) => Math.max(MIN_ZOOM, z / 1.6))}
-          disabled={zoom <= MIN_ZOOM}
-        />
-      </View>
-
     </View>
-  );
-}
-
-function ToolbarButton({
-  icon,
-  onPress,
-  disabled,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      className="h-11 w-11 items-center justify-center rounded-full bg-card/90 active:opacity-80"
-      style={{ opacity: disabled ? 0.35 : 1 }}
-      onPress={disabled ? undefined : onPress}
-    >
-      <Ionicons name={icon} size={20} color={colors.foreground} />
-    </Pressable>
   );
 }
