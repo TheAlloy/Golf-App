@@ -43,6 +43,14 @@ const STARS = (() => {
 export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 8;
 
+/** Gap between the fully zoomed-out globe and the edges of the screen. */
+export const GLOBE_EDGE_PADDING = 16;
+
+/** Sphere radius: fits the shorter edge with padding, then scales with zoom. */
+function globeRadius(width: number, height: number, zoom: number): number {
+  return (Math.min(width, height) / 2 - GLOBE_EDGE_PADDING) * zoom;
+}
+
 export type GlobeMarker = {
   id: string;
   latitude: number;
@@ -107,7 +115,7 @@ export default function Globe({
   // fills the screen so a zoomed-in view has no empty bands.
   const cx = width / 2;
   const cy = height / 2;
-  const scale = (Math.min(width, height) / 2 - 2) * zoom;
+  const scale = globeRadius(width, height, zoom);
 
   const projection = useMemo(
     () =>
@@ -159,7 +167,7 @@ export default function Globe({
     const { width: w, height: h } = sizeRef.current;
     const project = (z: number, rot: [number, number]) =>
       geoOrthographic()
-        .scale((Math.min(w, h) / 2 - 2) * z)
+        .scale(globeRadius(w, h, z))
         .translate([w / 2, h / 2])
         .rotate(rot)
         .clipAngle(90);
