@@ -15,7 +15,7 @@ import { computeProgression, wishReward } from '@/lib/progression';
 import { wishlistProgress } from '@/lib/wishlist';
 import { usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
 
-export default function TrophiesScreen() {
+export default function AchievementsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabSpace = useTabBarSpace();
@@ -57,7 +57,7 @@ export default function TrophiesScreen() {
         contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: tabSpace + 24 }}
       >
         <View>
-          <Text className="font-bold text-2xl text-foreground">Trophies</Text>
+          <Text className="font-bold text-2xl text-foreground">Achievements</Text>
           <Text className="text-xs text-muted-foreground">
             Play your wishlist, collect points, level up.
           </Text>
@@ -194,7 +194,7 @@ export default function TrophiesScreen() {
         {/* Badges */}
         <View>
           <View className="mb-2 flex-row items-center justify-between">
-            <Text className="font-semibold text-base">Achievements</Text>
+            <Text className="font-semibold text-base">Badges</Text>
             <Text className="text-xs text-muted-foreground">
               {earned.length} / {achievements.length} earned
             </Text>

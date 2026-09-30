@@ -1,6 +1,12 @@
 import { geoDistance, geoGraticule10, geoOrthographic, geoPath } from 'd3-geo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GestureResponderEvent, PanResponder, Platform, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  GestureResponderEvent,
+  PanResponder,
+  Platform,
+  View,
+} from 'react-native';
 import Svg, {
   Circle,
   ClipPath,
@@ -56,7 +62,14 @@ export type GlobeMarker = {
   latitude: number;
   longitude: number;
   label: string;
+  /** Played courses pin in lime; wishlisted ones in pink. */
+  kind?: 'played' | 'wishlist';
 };
+
+/** How long the globe waits without interaction before turning on its own. */
+export const IDLE_SPIN_DELAY_MS = 10_000;
+/** Idle spin speed at zoom 1, in degrees per second (a turn a minute). */
+const IDLE_SPIN_DEG_PER_SEC = 6;
 
 type Props = {
   width: number;
@@ -70,6 +83,11 @@ type Props = {
   onSelectMarker?: (id: string) => void;
   /** Where the globe faces on first render, as [longitude, latitude]. */
   initialCentre?: [number, number] | null;
+  /**
+   * Turn slowly on its own after IDLE_SPIN_DELAY_MS without interaction.
+   * Pass false while the globe is off screen so it doesn't burn frames.
+   */
+  idleSpin?: boolean;
 };
 
 export default function Globe({
@@ -81,6 +99,7 @@ export default function Globe({
   onZoomChange,
   onSelectMarker,
   initialCentre = null,
+  idleSpin = true,
 }: Props) {
   const [rotation, setRotation] = useState<[number, number]>([70, -15]);
   const rotationRef = useRef<[number, number]>([70, -15]);
@@ -94,6 +113,8 @@ export default function Globe({
   // remaining finger carries on from where the globe is rather than jumping.
   const dragOrigin = useRef({ dx: 0, dy: 0 });
   const container = useRef<View>(null);
+  // Any touch, drag, pinch or wheel pushes the idle spin back another 10s.
+  const lastInteraction = useRef(0);
   const sizeRef = useRef({ width, height });
   // Where the globe's canvas sits in the window, so finger positions (page
   // coordinates) can be turned into canvas coordinates.
@@ -187,6 +208,7 @@ export default function Globe({
       setRotation(rot);
     }
     userDriving.current = true;
+    lastInteraction.current = Date.now();
     zoomRef.current = clamped;
     onZoomRef.current?.(clamped);
   }, []);
@@ -204,6 +226,7 @@ export default function Globe({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
         userDriving.current = true;
+        lastInteraction.current = Date.now();
         gestureStart.current = rotationRef.current;
         pinchStart.current = null;
         pinched.current = e.nativeEvent.touches.length > 1;
@@ -218,6 +241,7 @@ export default function Globe({
         }
       },
       onPanResponderMove: (e, g) => {
+        lastInteraction.current = Date.now();
         const touches = e.nativeEvent.touches;
         moved.current = Math.max(moved.current, Math.abs(g.dx) + Math.abs(g.dy));
 
@@ -257,6 +281,7 @@ export default function Globe({
         setRotation([lambda, phi]);
       },
       onPanResponderRelease: (e) => {
+        lastInteraction.current = Date.now();
         // A press that barely moved is a tap, not a drag.
         if (moved.current < 6 && !pinched.current) tapRef.current?.(e);
         pinchStart.current = null;
@@ -308,6 +333,44 @@ export default function Globe({
     };
   }, []);
 
+  // Respect the system's reduce-motion setting: no idle spin at all.
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let live = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((on) => live && setReduceMotion(on))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!idleSpin || reduceMotion) return;
+    // Coming back on screen counts as a fresh start, so it waits the full
+    // delay again rather than spinning the moment you return.
+    lastInteraction.current = Date.now();
+    let frame = 0;
+    let last = 0;
+    const tick = (now: number) => {
+      frame = requestAnimationFrame(tick);
+      const dt = last ? now - last : 0;
+      // ~30fps is plenty for a slow turn and halves the redraw cost.
+      if (last && dt < 33) return;
+      last = now;
+      if (Date.now() - lastInteraction.current < IDLE_SPIN_DELAY_MS) return;
+      const step = (IDLE_SPIN_DEG_PER_SEC * Math.min(dt, 100)) / 1000 / zoomRef.current;
+      const [l, phi] = rotationRef.current;
+      const next: [number, number] = [(l + step) % 360, phi];
+      rotationRef.current = next;
+      setRotation(next);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [idleSpin, reduceMotion]);
+
   const { landPaths, graticulePath, blobs, pins } = useMemo(() => {
     const path = geoPath(projection);
     const centre: [number, number] = [-rotation[0], -rotation[1]];
@@ -336,16 +399,17 @@ export default function Globe({
 
     // Individual courses only appear once you are close enough to tell them
     // apart; below that the blobs carry the story.
-    const placed =
-      zoom < 1.8
-        ? []
-        : markers
-            .filter((m) => visible(m.longitude, m.latitude))
-            .map((m) => {
-              const xy = projection([m.longitude, m.latitude]);
-              return xy ? { id: m.id, label: m.label, cx: xy[0], cy: xy[1] } : null;
-            })
-            .filter((d): d is NonNullable<typeof d> => d !== null);
+    // Every course gets a dot at every zoom, lime for played and pink for
+    // wishlisted, so the two always read apart; names wait for zoom 3.
+    const placed = markers
+      .filter((m) => visible(m.longitude, m.latitude))
+      .map((m) => {
+        const xy = projection([m.longitude, m.latitude]);
+        return xy
+          ? { id: m.id, label: m.label, kind: m.kind ?? 'played', cx: xy[0], cy: xy[1] }
+          : null;
+      })
+      .filter((d): d is NonNullable<typeof d> => d !== null);
 
     // Label only what can be read: in a tight cluster the names would stack on
     // top of each other, so keep the first and drop any that would collide.
@@ -442,8 +506,19 @@ export default function Globe({
 
           {pins.map((p) => (
             <G key={p.id}>
-              <Circle cx={p.cx} cy={p.cy} r={5} fill={GLOBE_COLORS.pin} opacity={0.25} />
-              <Circle cx={p.cx} cy={p.cy} r={2.4} fill={GLOBE_COLORS.pin} />
+              <Circle
+                cx={p.cx}
+                cy={p.cy}
+                r={5}
+                fill={p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin}
+                opacity={0.25}
+              />
+              <Circle
+                cx={p.cx}
+                cy={p.cy}
+                r={2.4}
+                fill={p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin}
+              />
               {zoom >= 3 && p.showLabel && (
                 <SvgText
                   x={p.cx}

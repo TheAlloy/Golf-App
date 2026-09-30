@@ -4,14 +4,10 @@ import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, NAV_COLORS } from '@/constants/theme';
+import { NAV_COLORS } from '@/constants/theme';
 
 /** Height of the floating pill. */
 export const TAB_BAR_HEIGHT = 64;
-/** Diameter of the raised log-a-round button. */
-const ACTION_SIZE = 64;
-/** How far the action button rises above the pill. */
-const ACTION_RISE = 22;
 
 /** Gap between the pill and the bottom of the screen. */
 function barOffset(bottomInset: number): number {
@@ -29,14 +25,13 @@ type IconName = keyof typeof Ionicons.glyphMap;
 const TABS: Record<string, { label: string; icon: IconName }> = {
   index: { label: 'Home', icon: 'earth-outline' },
   explore: { label: 'Explore', icon: 'compass-outline' },
-  trophies: { label: 'Trophies', icon: 'trophy-outline' },
+  achievements: { label: 'Achievements', icon: 'trophy-outline' },
   profile: { label: 'Profile', icon: 'person-outline' },
 };
 
 /**
- * A floating pill with four icon tabs split around a raised green
- * button. The button logs a round rather than being a tab of its own —
- * adding rounds is the one thing the app should always make easy.
+ * A floating pill of five matching icons: four tabs, with a + in the middle
+ * that opens the round logger rather than being a tab of its own.
  */
 export default function TabBar({ state, navigation }: BottomTabBarProps) {
   const router = useRouter();
@@ -92,30 +87,18 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
       >
         {renderTab(0)}
         {renderTab(1)}
-        <View style={{ width: ACTION_SIZE + 16 }} />
-        {renderTab(2)}
-        {renderTab(3)}
-      </View>
-
-      <View
-        pointerEvents="box-none"
-        className="absolute inset-x-0 items-center"
-        style={{ top: -ACTION_RISE }}
-      >
+        {/* Log a round: styled like a tab, but it opens the logger. */}
         <Pressable
-          className="items-center justify-center rounded-full active:opacity-90"
-          style={{
-            width: ACTION_SIZE,
-            height: ACTION_SIZE,
-            backgroundColor: colors.primary,
-            boxShadow: `0 0 22px ${NAV_COLORS.glow}, 0 6px 14px rgba(0, 0, 0, 0.45)`,
-          }}
+          className="flex-1 items-center justify-center active:opacity-70"
           onPress={() => router.push('/log-round')}
           accessibilityRole="button"
           accessibilityLabel="Log a round"
+          hitSlop={4}
         >
-          <Ionicons name="add" size={32} color={colors.primaryForeground} />
+          <Ionicons name="add-circle-outline" size={25} color={NAV_COLORS.icon} />
         </Pressable>
+        {renderTab(2)}
+        {renderTab(3)}
       </View>
     </View>
   );

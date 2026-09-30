@@ -9,8 +9,8 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 
 ## What's built
 
-- **Four tabs** — Home, Explore, Trophies and Profile, split around a raised
-  **+** that logs a round from anywhere.
+- **Four tabs** — Home, Explore, Achievements and Profile, in a floating
+  bar with a **+** in the middle that logs a round from anywhere.
 - **Globe** (Home) — an orthographic world globe (d3-geo + SVG) that
   starts dark and lights up only where you have played: each area you know
   glows further along a heat ramp the more courses you tick off there. Drag to
@@ -22,7 +22,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
   [docs/course-catalogue.md](docs/course-catalogue.md).
 - **Explore** — search the catalogue or browse by region (rarest first) and
   heart courses onto your wishlist.
-- **Trophies** — points, levels, wishlist quests and tiered achievements.
+- **Achievements** — points, levels, wishlist quests and tiered badges.
   A wishlisted course scores double the first time you play it after adding
   it (`src/lib/progression.ts`, `src/lib/wishlist.ts`).
 - **Rounds** — log a final score, or go hole by hole with strokes, putts and
@@ -81,7 +81,7 @@ src/
     (tabs)/       bottom-tab screens
       index.tsx     Home: the globe
       explore.tsx   course search, regions, wishlist
-      trophies.tsx  points, levels, quests, achievements
+      achievements.tsx  points, levels, quests, badges
       profile.tsx   handicap, shot quality, rounds, friends
     log-round.tsx modal: final score or hole by hole
     round/[id]    round detail with scorecard grid

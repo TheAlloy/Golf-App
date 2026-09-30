@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, SectionList, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,7 @@ import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
-import { colors, HEAT_STOPS } from '@/constants/theme';
+import { colors, GLOBE_COLORS, HEAT_STOPS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
 import { buildHeatCells } from '@/lib/heat-cells';
 import { computeProgression } from '@/lib/progression';
@@ -51,6 +51,14 @@ export default function HomeScreen() {
   );
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [view, setView] = useState<HomeView>('map');
+  // The idle spin only runs while the globe is actually on screen.
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, [])
+  );
 
   const playedCourses = useMemo(
     () =>
@@ -71,28 +79,47 @@ export default function HomeScreen() {
 
   const cells = useMemo(() => buildHeatCells(playedCourses), [playedCourses]);
 
-  const markers: GlobeMarker[] = useMemo(
+  // Wishlisted courses you haven't played yet, as their own pink markers.
+  const wishedCourses = useMemo(
     () =>
-      playedCourses.map(({ course }) => ({
+      wishlist
+        .filter((w) => !playedIds.has(w.courseId))
+        .map((w) => courses.get(w.courseId))
+        .filter((c): c is Course => c !== undefined),
+    [courses, playedIds, wishlist]
+  );
+
+  const markers: GlobeMarker[] = useMemo(
+    () => [
+      ...playedCourses.map(({ course }) => ({
         id: course.id,
         latitude: course.coordinate.latitude,
         longitude: course.coordinate.longitude,
         label: course.name,
+        kind: 'played' as const,
       })),
-    [playedCourses]
+      ...wishedCourses.map((course) => ({
+        id: course.id,
+        latitude: course.coordinate.latitude,
+        longitude: course.coordinate.longitude,
+        label: course.name,
+        kind: 'wishlist' as const,
+      })),
+    ],
+    [playedCourses, wishedCourses]
   );
 
-  // Face the globe at the middle of everywhere you have played.
+  // Face the globe at the middle of everywhere you have played, or of your
+  // wishlist when nothing is played yet.
   const initialCentre = useMemo<[number, number] | null>(() => {
-    if (playedCourses.length === 0) return null;
-    const lng =
-      playedCourses.reduce((sum, { course }) => sum + course.coordinate.longitude, 0) /
-      playedCourses.length;
-    const lat =
-      playedCourses.reduce((sum, { course }) => sum + course.coordinate.latitude, 0) /
-      playedCourses.length;
+    const focus = playedCourses.length
+      ? playedCourses.map((pc) => pc.course)
+      : wishedCourses;
+    if (focus.length === 0) return null;
+    const lng = focus.reduce((sum, c) => sum + c.coordinate.longitude, 0) / focus.length;
+    const lat = focus.reduce((sum, c) => sum + c.coordinate.latitude, 0) / focus.length;
     return [lng, lat];
-  }, [playedCourses]);
+  }, [playedCourses, wishedCourses]);
 
   const onSelectMarker = useCallback(
     (id: string) => router.push({ pathname: '/course/[id]', params: { id } }),
@@ -116,7 +143,7 @@ export default function HomeScreen() {
   }, [playedCourses]);
 
   const empty = playedCourses.length === 0;
-  const headerHeight = insets.top + 112;
+  const headerHeight = insets.top + 100;
 
   return (
     <View className="flex-1 bg-background">
@@ -131,11 +158,13 @@ export default function HomeScreen() {
           onZoomChange={setZoom}
           onSelectMarker={onSelectMarker}
           initialCentre={initialCentre}
+          idleSpin={focused && view === 'map'}
         />
       </View>
 
       {view === 'list' && (
-        <SectionList indicatorStyle="white"
+        <SectionList
+          indicatorStyle="white"
           className="absolute inset-0"
           sections={sections}
           keyExtractor={(pc) => pc.course.id}
@@ -178,18 +207,11 @@ export default function HomeScreen() {
         style={{ top: 0, paddingTop: insets.top + 8 }}
       >
         <View className="flex-row items-center justify-between">
-          <View>
-            <Text className="font-bold text-2xl text-foreground">Global Play</Text>
-            <Text className="text-xs text-muted-foreground">
-              {empty
-                ? 'Nowhere yet'
-                : `${playedIds.size} course${playedIds.size === 1 ? '' : 's'} · ${rounds.length} round${rounds.length === 1 ? '' : 's'}`}
-            </Text>
-          </View>
+          <Text className="font-bold text-2xl text-foreground">Global Play</Text>
           <Pressable
             className="flex-row items-center gap-1.5 rounded-full bg-card/90 px-3 py-2 active:opacity-80"
-            onPress={() => router.push('/trophies')}
-            accessibilityLabel={`${progression.total} points, level ${progression.level.number}. Open trophies`}
+            onPress={() => router.push('/achievements')}
+            accessibilityLabel={`${progression.total} points, level ${progression.level.number}. Open achievements`}
           >
             <Ionicons name="sparkles" size={14} color={colors.warm} />
             <Text className="font-bold text-sm text-foreground">
@@ -241,22 +263,27 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Heat legend, only meaningful once there is heat */}
-      {!empty && view === 'map' && (
+      {/* Legend: what the glow and the two dot colours mean */}
+      {(!empty || wishedCourses.length > 0) && view === 'map' && (
         <View
-          className="absolute left-4 rounded-xl bg-card/90 px-3 py-2"
+          className="absolute left-4 gap-2 rounded-xl bg-card/90 px-3 py-2"
           style={{ bottom: tabSpace + 16 }}
         >
-          <Text className="text-xs text-muted-foreground">Courses played</Text>
-          <View className="mt-1.5 flex-row items-center gap-2">
-            <Text className="text-[10px] text-muted-foreground">1</Text>
-            <View className="h-1.5 w-24 flex-row overflow-hidden rounded-full">
-              {HEAT_STOPS.map((c) => (
-                <View key={c} className="h-full flex-1" style={{ backgroundColor: c }} />
-              ))}
-            </View>
-            <Text className="text-[10px] text-muted-foreground">50+</Text>
+          <View className="flex-row items-center gap-3">
+            <LegendDot color={GLOBE_COLORS.pin} label="Played" />
+            <LegendDot color={GLOBE_COLORS.wishlist} label="Wishlist" />
           </View>
+          {!empty && (
+            <View className="flex-row items-center gap-2">
+              <Text className="text-[10px] text-muted-foreground">1</Text>
+              <View className="h-1.5 w-20 flex-row overflow-hidden rounded-full">
+                {HEAT_STOPS.map((c) => (
+                  <View key={c} className="h-full flex-1" style={{ backgroundColor: c }} />
+                ))}
+              </View>
+              <Text className="text-[10px] text-muted-foreground">50+ courses</Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -298,5 +325,14 @@ function PlayedCourseRow({ item, onPress }: { item: PlayedCourse; onPress: () =>
       )}
       <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
     </Pressable>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+      <Text className="text-xs text-muted-foreground">{label}</Text>
+    </View>
   );
 }

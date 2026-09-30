@@ -61,6 +61,7 @@ export const GLOBE_COLORS = {
   atmosphere: 'hsl(206, 92%, 62%)',
   limb: 'hsl(203, 90%, 72%)',
   pin: 'hsl(82, 78%, 58%)',
+  wishlist: 'hsl(330, 90%, 68%)',
   pinLabel: 'hsl(210, 24%, 88%)',
 };
 
@@ -84,5 +85,4 @@ export const NAV_COLORS = {
   pillEdge: 'hsla(215, 30%, 80%, 0.06)',
   icon: 'hsla(210, 20%, 98%, 0.45)',
   iconActive: 'hsl(210, 20%, 98%)',
-  glow: 'hsla(82, 78%, 55%, 0.4)',
 };

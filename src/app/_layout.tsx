@@ -11,6 +11,7 @@ import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import { HeaderBack } from '@/components/header-back';
 import { colors } from '@/constants/theme';
 import { installOverlayScrollbars } from '@/lib/scrollbars';
 
@@ -39,14 +40,23 @@ export default function RootLayout() {
           headerTitleStyle: { fontFamily: 'Manrope_600SemiBold', color: colors.foreground },
           headerTintColor: colors.primary,
           contentStyle: { backgroundColor: colors.background },
+          headerLeft: () => <HeaderBack />,
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
         <Stack.Screen name="rounds" options={{ title: 'Rounds' }} />
         <Stack.Screen name="friends" options={{ title: 'Friends' }} />
         <Stack.Screen name="coverage" options={{ title: 'Course coverage' }} />
-        <Stack.Screen name="log-round" options={{ presentation: 'modal', title: 'Log a round' }} />
-        <Stack.Screen name="add-course" options={{ presentation: 'modal', title: 'Add a course' }} />
+        <Stack.Screen name="log-round" options={{
+            presentation: 'modal',
+            title: 'Log a round',
+            headerLeft: () => <HeaderBack variant="close" />,
+          }} />
+        <Stack.Screen name="add-course" options={{
+            presentation: 'modal',
+            title: 'Add a course',
+            headerLeft: () => <HeaderBack variant="close" />,
+          }} />
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
         <Stack.Screen name="round/[id]" options={{ title: 'Round' }} />
       </Stack>
