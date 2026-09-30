@@ -16,10 +16,25 @@ type TextProps = RNTextProps & {
  * (Button, CardTitle, ...) pass class names down through TextClassContext
  * the same way shadcn relies on CSS inheritance on the web.
  */
+/**
+ * Weights are separate font families on native (see tailwind.config.js), so
+ * text only gets the regular family when no weight class is asking for another.
+ */
+const WEIGHT_CLASS = /(^|\s)font-(medium|semibold|bold)(\s|$)/;
+
+export function withFontFamily(classes: string): string {
+  return WEIGHT_CLASS.test(classes) ? classes : cn('font-sans', classes);
+}
+
 function Text({ className, asChild = false, ...props }: TextProps) {
   const context = useContext(TextClassContext);
   const Component = asChild ? Slot.Text : RNText;
-  return <Component className={cn('text-base text-foreground', context, className)} {...props} />;
+  return (
+    <Component
+      className={withFontFamily(cn('text-base text-foreground', context, className))}
+      {...props}
+    />
+  );
 }
 
 export { Text, TextClassContext };

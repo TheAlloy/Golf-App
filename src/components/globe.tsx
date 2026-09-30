@@ -442,6 +442,7 @@ export default function Globe({
                   y={p.cy - 9}
                   fill={GLOBE_COLORS.pinLabel}
                   fontSize={8}
+                  fontFamily="Manrope_600SemiBold"
                   fontWeight="600"
                   textAnchor="middle"
                 >

@@ -1,12 +1,12 @@
 import '@/global.css';
 
 import {
-  Raleway_400Regular,
-  Raleway_500Medium,
-  Raleway_600SemiBold,
-  Raleway_700Bold,
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
   useFonts,
-} from '@expo-google-fonts/raleway';
+} from '@expo-google-fonts/manrope';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -17,10 +17,10 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Raleway_400Regular,
-    Raleway_500Medium,
-    Raleway_600SemiBold,
-    Raleway_700Bold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
   });
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },
-          headerTitleStyle: { fontFamily: 'Raleway_600SemiBold', color: colors.foreground },
+          headerTitleStyle: { fontFamily: 'Manrope_600SemiBold', color: colors.foreground },
           headerTintColor: colors.primary,
           contentStyle: { backgroundColor: colors.background },
         }}

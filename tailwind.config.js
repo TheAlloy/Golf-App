@@ -48,10 +48,10 @@ module.exports = {
       },
       // React Native has no font synthesis, so each weight is its own family.
       fontFamily: {
-        sans: ['Raleway_400Regular'],
-        medium: ['Raleway_500Medium'],
-        semibold: ['Raleway_600SemiBold'],
-        bold: ['Raleway_700Bold'],
+        sans: ['Manrope_400Regular'],
+        medium: ['Manrope_500Medium'],
+        semibold: ['Manrope_600SemiBold'],
+        bold: ['Manrope_700Bold'],
       },
       borderRadius: {
         xl: 'calc(var(--radius) + 4px)',
