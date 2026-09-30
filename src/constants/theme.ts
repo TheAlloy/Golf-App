@@ -78,12 +78,11 @@ export const TIER_TINTS = {
   gold: 'hsla(45, 96%, 58%, 0.18)',
 };
 
-/** Floating tab bar and its pearlescent log-a-round button. */
+/** Floating tab bar and its log-a-round button. */
 export const NAV_COLORS = {
   pill: 'hsl(222, 28%, 8%)',
   pillEdge: 'hsla(215, 30%, 80%, 0.06)',
   icon: 'hsla(210, 20%, 98%, 0.45)',
   iconActive: 'hsl(210, 20%, 98%)',
-  plus: 'hsl(226, 24%, 30%)',
-  glow: 'hsla(220, 90%, 92%, 0.45)',
+  glow: 'hsla(82, 78%, 55%, 0.4)',
 };

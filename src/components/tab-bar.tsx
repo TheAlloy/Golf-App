@@ -1,19 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
-import type { BottomTabBarProps } from "expo-router/js-tabs";
-import { useRouter } from "expo-router";
-import { Pressable, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, {
-  Circle,
-  Defs,
-  Ellipse,
-  Line,
-  LinearGradient,
-  RadialGradient,
-  Stop,
-} from "react-native-svg";
+import { Ionicons } from '@expo/vector-icons';
+import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import { useRouter } from 'expo-router';
+import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { NAV_COLORS } from "@/constants/theme";
+import { colors, NAV_COLORS } from '@/constants/theme';
 
 /** Height of the floating pill. */
 export const TAB_BAR_HEIGHT = 64;
@@ -36,14 +27,14 @@ export function useTabBarSpace(): number {
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const TABS: Record<string, { label: string; icon: IconName }> = {
-  index: { label: "Home", icon: "home-outline" },
-  explore: { label: "Explore", icon: "compass-outline" },
-  trophies: { label: "Trophies", icon: "trophy-outline" },
-  profile: { label: "Profile", icon: "person-outline" },
+  index: { label: 'Home', icon: 'earth-outline' },
+  explore: { label: 'Explore', icon: 'compass-outline' },
+  trophies: { label: 'Trophies', icon: 'trophy-outline' },
+  profile: { label: 'Profile', icon: 'person-outline' },
 };
 
 /**
- * A floating pill with four icon tabs split around a raised, pearlescent
+ * A floating pill with four icon tabs split around a raised green
  * button. The button logs a round rather than being a tab of its own —
  * adding rounds is the one thing the app should always make easy.
  */
@@ -58,7 +49,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
     const focused = state.index === index;
     const onPress = () => {
       const event = navigation.emit({
-        type: "tabPress",
+        type: 'tabPress',
         target: route.key,
         canPreventDefault: true,
       });
@@ -79,13 +70,6 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
           size={25}
           color={focused ? NAV_COLORS.iconActive : NAV_COLORS.icon}
         />
-        {/* A small dot marks where you are, since the icons carry no labels. */}
-        <View
-          className="mt-1.5 h-1 w-1 rounded-full"
-          style={{
-            backgroundColor: focused ? NAV_COLORS.iconActive : "transparent",
-          }}
-        />
       </Pressable>
     );
   };
@@ -103,7 +87,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
           backgroundColor: NAV_COLORS.pill,
           borderWidth: 1,
           borderColor: NAV_COLORS.pillEdge,
-          boxShadow: "0 14px 32px rgba(0, 0, 0, 0.55)",
+          boxShadow: '0 14px 32px rgba(0, 0, 0, 0.55)',
         }}
       >
         {renderTab(0)}
@@ -123,126 +107,16 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
           style={{
             width: ACTION_SIZE,
             height: ACTION_SIZE,
+            backgroundColor: colors.primary,
             boxShadow: `0 0 22px ${NAV_COLORS.glow}, 0 6px 14px rgba(0, 0, 0, 0.45)`,
           }}
-          onPress={() => router.push("/log-round")}
+          onPress={() => router.push('/log-round')}
           accessibilityRole="button"
           accessibilityLabel="Log a round"
         >
-          <PearlButton size={ACTION_SIZE} />
+          <Ionicons name="add" size={32} color={colors.primaryForeground} />
         </Pressable>
       </View>
     </View>
-  );
-}
-
-/**
- * Iridescent pearl: a pale base with soft pink, lavender and cyan swirls, a
- * specular highlight top-left and a darker rim, with a thin plus on top.
- */
-function PearlButton({ size }: { size: number }) {
-  const r = size / 2;
-  const arm = size * 0.17;
-  return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <Defs>
-        <LinearGradient id="pearlBase" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#F2F6FF" />
-          <Stop offset="0.55" stopColor="#D9E3FA" />
-          <Stop offset="1" stopColor="#C6D2F2" />
-        </LinearGradient>
-        <RadialGradient id="swirlPink" cx="50%" cy="50%" r="50%">
-          <Stop offset="0" stopColor="#F3A6E8" stopOpacity="0.85" />
-          <Stop offset="1" stopColor="#F3A6E8" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id="swirlLilac" cx="50%" cy="50%" r="50%">
-          <Stop offset="0" stopColor="#B8A4F5" stopOpacity="0.8" />
-          <Stop offset="1" stopColor="#B8A4F5" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id="swirlCyan" cx="50%" cy="50%" r="50%">
-          <Stop offset="0" stopColor="#A6E6F7" stopOpacity="0.85" />
-          <Stop offset="1" stopColor="#A6E6F7" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id="sheen" cx="34%" cy="26%" r="45%">
-          <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.95" />
-          <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id="rim" cx="50%" cy="50%" r="50%">
-          <Stop offset="0.78" stopColor="#6B78A8" stopOpacity="0" />
-          <Stop offset="1" stopColor="#6B78A8" stopOpacity="0.35" />
-        </RadialGradient>
-      </Defs>
-      <Circle cx={r} cy={r} r={r} fill="url(#pearlBase)" />
-      {/* Swirls, rotated ellipses so they read as flowing streaks */}
-      <Ellipse
-        cx={size * 0.3}
-        cy={size * 0.42}
-        rx={size * 0.28}
-        ry={size * 0.14}
-        fill="url(#swirlPink)"
-        transform={`rotate(-35 ${size * 0.3} ${size * 0.42})`}
-      />
-      <Ellipse
-        cx={size * 0.68}
-        cy={size * 0.68}
-        rx={size * 0.3}
-        ry={size * 0.13}
-        fill="url(#swirlLilac)"
-        transform={`rotate(-40 ${size * 0.68} ${size * 0.68})`}
-      />
-      <Ellipse
-        cx={size * 0.72}
-        cy={size * 0.28}
-        rx={size * 0.22}
-        ry={size * 0.12}
-        fill="url(#swirlCyan)"
-        transform={`rotate(30 ${size * 0.72} ${size * 0.28})`}
-      />
-      <Ellipse
-        cx={size * 0.42}
-        cy={size * 0.84}
-        rx={size * 0.24}
-        ry={size * 0.08}
-        fill="url(#swirlPink)"
-        transform={`rotate(-15 ${size * 0.42} ${size * 0.84})`}
-      />
-      <Ellipse
-        cx={size * 0.22}
-        cy={size * 0.7}
-        rx={size * 0.14}
-        ry={size * 0.1}
-        fill="url(#swirlCyan)"
-      />
-      <Circle cx={r} cy={r} r={r} fill="url(#sheen)" />
-      <Circle cx={r} cy={r} r={r} fill="url(#rim)" />
-      <Circle
-        cx={r}
-        cy={r}
-        r={r - 0.75}
-        fill="none"
-        stroke="#FFFFFF"
-        strokeOpacity={0.7}
-        strokeWidth={1.5}
-      />
-      {/* The plus */}
-      <Line
-        x1={r - arm}
-        y1={r}
-        x2={r + arm}
-        y2={r}
-        stroke={NAV_COLORS.plus}
-        strokeWidth={2.6}
-        strokeLinecap="round"
-      />
-      <Line
-        x1={r}
-        y1={r - arm}
-        x2={r}
-        y2={r + arm}
-        stroke={NAV_COLORS.plus}
-        strokeWidth={2.6}
-        strokeLinecap="round"
-      />
-    </Svg>
   );
 }
