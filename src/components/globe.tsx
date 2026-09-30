@@ -11,7 +11,9 @@ import Svg, {
   Circle,
   ClipPath,
   Defs,
+  Ellipse,
   G,
+  Line,
   Path,
   RadialGradient,
   Rect,
@@ -64,11 +66,18 @@ export type GlobeMarker = {
   label: string;
   /** Played courses pin in lime; wishlisted ones in pink. */
   kind?: 'played' | 'wishlist';
+  /** Status line for the close-up callout, e.g. "Played · 3 rounds". */
+  detail?: string;
 };
+
+/** From this zoom the pins become flags with a name-and-status callout. */
+export const FLAG_ZOOM = 5;
+/** How quickly zoom eases toward its target; lower is snappier. */
+const ZOOM_EASE_MS = 90;
 
 /** How long the globe waits without interaction before turning on its own. */
 export const IDLE_SPIN_DELAY_MS = 10_000;
-/** Idle spin speed at zoom 1, in degrees per second (a turn a minute). */
+/** Idle spin speed in degrees per second (a turn a minute). */
 const IDLE_SPIN_DEG_PER_SEC = 6;
 
 type Props = {
@@ -157,8 +166,11 @@ export default function Globe({
       for (const m of markers) {
         const xy = projection([m.longitude, m.latitude]);
         if (!xy) continue;
-        const d = Math.hypot(xy[0] - locationX, xy[1] - locationY);
-        if (d < 28 && (!best || d < best.d)) best = { id: m.id, d };
+        // Up close the flag and its callout stand above the spot, so aim the
+        // hit area at them rather than at the base of the pole.
+        const lift = zoomRef.current >= FLAG_ZOOM ? 24 : 0;
+        const d = Math.hypot(xy[0] - locationX, xy[1] - lift - locationY);
+        if (d < (lift ? 34 : 28) && (!best || d < best.d)) best = { id: m.id, d };
       }
       if (best) onSelectMarker(best.id);
     },
@@ -180,38 +192,109 @@ export default function Globe({
   }, [initialCentre]);
 
   /**
-   * Zoom to `next` while keeping whatever is under (fx, fy) in place, so a
-   * pinch over Scotland zooms into Scotland rather than the middle of the
-   * screen. Off the globe, it zooms about the centre.
+   * Set zoom to `next` at once, keeping whatever is under (fx, fy) in place,
+   * so a pinch over Scotland zooms into Scotland rather than the middle of
+   * the screen. Off the globe, it zooms about the centre.
    */
-  const zoomAt = useCallback((next: number, fx: number, fy: number) => {
+  const projectAt = useCallback((z: number, rot: [number, number]) => {
     const { width: w, height: h } = sizeRef.current;
-    const project = (z: number, rot: [number, number]) =>
-      geoOrthographic()
-        .scale(globeRadius(w, h, z))
-        .translate([w / 2, h / 2])
-        .rotate(rot)
-        .clipAngle(90);
-
-    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
-    let rot = rotationRef.current;
-    const target = project(zoomRef.current, rot).invert?.([fx, fy]);
-    if (target) {
-      // Two passes of "rotate by the error" converge well for small steps.
-      for (let i = 0; i < 2; i++) {
-        const now = project(clamped, rot).invert?.([fx, fy]);
-        if (!now) break;
-        rot = [rot[0] - (target[0] - now[0]), Math.max(-85, Math.min(85, rot[1] - (target[1] - now[1])))];
-      }
-      rotationRef.current = rot;
-      gestureStart.current = rot;
-      setRotation(rot);
-    }
-    userDriving.current = true;
-    lastInteraction.current = Date.now();
-    zoomRef.current = clamped;
-    onZoomRef.current?.(clamped);
+    return geoOrthographic()
+      .scale(globeRadius(w, h, z))
+      .translate([w / 2, h / 2])
+      .rotate(rot)
+      .clipAngle(90);
   }, []);
+
+  /** The [lng, lat] under screen point (fx, fy) right now, if it's on the globe. */
+  const geoUnder = useCallback(
+    (fx: number, fy: number) =>
+      projectAt(zoomRef.current, rotationRef.current).invert?.([fx, fy]) ?? null,
+    [projectAt]
+  );
+
+  const applyZoom = useCallback(
+    (next: number, fx: number, fy: number, anchor?: [number, number] | null) => {
+      const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
+      let rot = rotationRef.current;
+      // The place that must stay under (fx, fy). An animation passes one fixed
+      // anchor for all its frames, so small per-frame errors can't add up.
+      const target = anchor === undefined ? geoUnder(fx, fy) : anchor;
+      if (target) {
+        // "Rotate by the error" until the anchor sits under the focal point.
+        for (let i = 0; i < 6; i++) {
+          const now = projectAt(clamped, rot).invert?.([fx, fy]);
+          if (!now) break;
+          if (Math.abs(target[0] - now[0]) + Math.abs(target[1] - now[1]) < 1e-5) break;
+          rot = [
+            rot[0] - (target[0] - now[0]),
+            Math.max(-85, Math.min(85, rot[1] - (target[1] - now[1]))),
+          ];
+        }
+        rotationRef.current = rot;
+        gestureStart.current = rot;
+        setRotation(rot);
+      }
+      userDriving.current = true;
+      lastInteraction.current = Date.now();
+      zoomRef.current = clamped;
+      onZoomRef.current?.(clamped);
+    },
+    [geoUnder, projectAt]
+  );
+
+  // Smooth zoom: gestures and the wheel set a target, and each frame eases
+  // the real zoom toward it. Wheel notches then glide instead of jumping.
+  const zoomTarget = useRef<number | null>(null);
+  const zoomFocus = useRef({ x: 0, y: 0 });
+  const zoomAnchor = useRef<[number, number] | null>(null);
+  const zoomFrame = useRef(0);
+  const reduceMotionRef = useRef(false);
+
+  const zoomAt = useCallback(
+    (next: number, fx: number, fy: number) => {
+      const target = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
+      zoomFocus.current = { x: fx, y: fy };
+      // Measure what is under the fingers once per event, not every frame.
+      zoomAnchor.current = geoUnder(fx, fy);
+      lastInteraction.current = Date.now();
+      if (reduceMotionRef.current) {
+        zoomTarget.current = null;
+        applyZoom(target, fx, fy, zoomAnchor.current);
+        return;
+      }
+      zoomTarget.current = target;
+      if (zoomFrame.current) return;
+      let last = 0;
+      const step = (now: number) => {
+        const goal = zoomTarget.current;
+        if (goal === null) {
+          zoomFrame.current = 0;
+          return;
+        }
+        const dt = last ? Math.min(now - last, 64) : 16;
+        last = now;
+        const current = zoomRef.current;
+        const { x, y } = zoomFocus.current;
+        if (Math.abs(goal - current) < 0.002) {
+          applyZoom(goal, x, y, zoomAnchor.current);
+          zoomTarget.current = null;
+          zoomFrame.current = 0;
+          return;
+        }
+        applyZoom(
+          current + (goal - current) * (1 - Math.exp(-dt / ZOOM_EASE_MS)),
+          x,
+          y,
+          zoomAnchor.current
+        );
+        zoomFrame.current = requestAnimationFrame(step);
+      };
+      zoomFrame.current = requestAnimationFrame(step);
+    },
+    [applyZoom, geoUnder]
+  );
+
+  useEffect(() => () => cancelAnimationFrame(zoomFrame.current), []);
 
   const zoomAtRef = useRef(zoomAt);
   useEffect(() => {
@@ -303,7 +386,9 @@ export default function Globe({
       const rect = el.getBoundingClientRect();
       focus = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
-    const zoomBy = (factor: number) => zoomAtRef.current(zoomRef.current * factor, focus.x, focus.y);
+    // Build on the pending target, so quick wheel ticks add up.
+    const zoomBy = (factor: number) =>
+      zoomAtRef.current((zoomTarget.current ?? zoomRef.current) * factor, focus.x, focus.y);
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       setFocus(e);
@@ -337,10 +422,14 @@ export default function Globe({
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     let live = true;
+    const update = (on: boolean) => {
+      reduceMotionRef.current = on;
+      setReduceMotion(on);
+    };
     AccessibilityInfo.isReduceMotionEnabled()
-      .then((on) => live && setReduceMotion(on))
+      .then((on) => live && update(on))
       .catch(() => {});
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', update);
     return () => {
       live = false;
       sub.remove();
@@ -361,7 +450,9 @@ export default function Globe({
       if (last && dt < 33) return;
       last = now;
       if (Date.now() - lastInteraction.current < IDLE_SPIN_DELAY_MS) return;
-      const step = (IDLE_SPIN_DEG_PER_SEC * Math.min(dt, 100)) / 1000 / zoomRef.current;
+      // Only the whole-world view spins; a close-up stays where you left it.
+      if (zoomRef.current > MIN_ZOOM + 0.001) return;
+      const step = (IDLE_SPIN_DEG_PER_SEC * Math.min(dt, 100)) / 1000;
       const [l, phi] = rotationRef.current;
       const next: [number, number] = [(l + step) % 360, phi];
       rotationRef.current = next;
@@ -371,7 +462,7 @@ export default function Globe({
     return () => cancelAnimationFrame(frame);
   }, [idleSpin, reduceMotion]);
 
-  const { landPaths, graticulePath, blobs, pins } = useMemo(() => {
+  const { landPaths, graticulePath, blobs, pins, glow } = useMemo(() => {
     const path = geoPath(projection);
     const centre: [number, number] = [-rotation[0], -rotation[1]];
     const visible = (lng: number, lat: number) => geoDistance([lng, lat], centre) < Math.PI / 2;
@@ -397,30 +488,46 @@ export default function Globe({
       })
       .filter((d): d is NonNullable<typeof d> => d !== null);
 
-    // Individual courses only appear once you are close enough to tell them
-    // apart; below that the blobs carry the story.
     // Every course gets a dot at every zoom, lime for played and pink for
     // wishlisted, so the two always read apart; names wait for zoom 3.
     const placed = markers
       .filter((m) => visible(m.longitude, m.latitude))
       .map((m) => {
         const xy = projection([m.longitude, m.latitude]);
-        return xy
-          ? { id: m.id, label: m.label, kind: m.kind ?? 'played', cx: xy[0], cy: xy[1] }
-          : null;
+        if (!xy) return null;
+        const kind = m.kind ?? 'played';
+        const detail = m.detail ?? (kind === 'wishlist' ? 'Wishlist' : 'Played');
+        return { id: m.id, label: m.label, kind, detail, cx: xy[0], cy: xy[1] };
       })
       .filter((d): d is NonNullable<typeof d> => d !== null);
 
-    // Label only what can be read: in a tight cluster the names would stack on
-    // top of each other, so keep the first and drop any that would collide.
-    const labelled: { cx: number; cy: number }[] = [];
+    // Label only what can be read. Up close each flag carries a callout box;
+    // further out, a bare name. Either way, anything that would overlap one
+    // already placed is dropped, so a tight cluster stays legible.
+    const flags = zoom >= FLAG_ZOOM;
+    const placedBoxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
     const pins = placed.map((p) => {
-      const clear = labelled.every((l) => Math.hypot(l.cx - p.cx, l.cy - p.cy) > 56);
-      if (clear) labelled.push({ cx: p.cx, cy: p.cy });
-      return { ...p, showLabel: clear };
+      const callout = flags ? calloutFor(p.label, p.detail, p.cx, p.cy) : null;
+      const box = callout
+        ? {
+            x0: callout.x - 2,
+            y0: callout.y - 2,
+            x1: callout.x + callout.w + 2,
+            y1: callout.y + callout.h + 2,
+          }
+        : { x0: p.cx - 28, y0: p.cy - 16, x1: p.cx + 28, y1: p.cy };
+      const clear = placedBoxes.every(
+        (o) => box.x1 < o.x0 || box.x0 > o.x1 || box.y1 < o.y0 || box.y0 > o.y1
+      );
+      if (clear) placedBoxes.push(box);
+      return { ...p, showLabel: clear, callout };
     });
 
-    return { landPaths, graticulePath: path(GRATICULE as never) ?? '', blobs, pins };
+    // The heat glow gives the big picture; up close it would smother the
+    // flags, so it fades as you zoom in.
+    const glow = zoom <= 1.5 ? 1 : Math.max(0.2, 1 - (zoom - 1.5) / 4);
+
+    return { landPaths, graticulePath: path(GRATICULE as never) ?? '', blobs, pins, glow };
   }, [cells, markers, projection, rotation, zoom]);
 
   return (
@@ -490,9 +597,11 @@ export default function Globe({
           ))}
 
           {/* Soft glow first, bright core on top — the city-lights look. */}
-          {blobs.map((b, i) => (
-            <Circle key={`g${i}`} cx={b.cx} cy={b.cy} r={b.r} fill={`url(#heat${b.stop})`} />
-          ))}
+          <G opacity={glow}>
+            {blobs.map((b, i) => (
+              <Circle key={`g${i}`} cx={b.cx} cy={b.cy} r={b.r} fill={`url(#heat${b.stop})`} />
+            ))}
+          </G>
           {blobs.map((b, i) => (
             <Circle
               key={`c${i}`}
@@ -504,38 +613,135 @@ export default function Globe({
             />
           ))}
 
-          {pins.map((p) => (
-            <G key={p.id}>
-              <Circle
-                cx={p.cx}
-                cy={p.cy}
-                r={5}
-                fill={p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin}
-                opacity={0.25}
+          {pins.map((p) => {
+            const color = p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin;
+            if (p.callout) return <FlagPin key={p.id} cx={p.cx} cy={p.cy} color={color} />;
+            return (
+              <G key={p.id}>
+                <Circle cx={p.cx} cy={p.cy} r={3.6} fill={color} opacity={0.14} />
+                <Circle cx={p.cx} cy={p.cy} r={2.3} fill={color} />
+                {zoom >= 3 && p.showLabel && (
+                  <SvgText
+                    x={p.cx}
+                    y={p.cy - 8}
+                    fill={GLOBE_COLORS.pinLabel}
+                    fontSize={8}
+                    fontFamily="Manrope_600SemiBold"
+                    fontWeight="600"
+                    textAnchor="middle"
+                  >
+                    {p.label}
+                  </SvgText>
+                )}
+              </G>
+            );
+          })}
+
+          {/* Callouts on their own layer, so no flag ever pokes through one. */}
+          {pins.map((p) =>
+            p.callout && p.showLabel ? (
+              <Callout
+                key={`callout-${p.id}`}
+                {...p.callout}
+                detail={p.detail}
+                color={p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin}
               />
-              <Circle
-                cx={p.cx}
-                cy={p.cy}
-                r={2.4}
-                fill={p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin}
-              />
-              {zoom >= 3 && p.showLabel && (
-                <SvgText
-                  x={p.cx}
-                  y={p.cy - 9}
-                  fill={GLOBE_COLORS.pinLabel}
-                  fontSize={8}
-                  fontFamily="Manrope_600SemiBold"
-                  fontWeight="600"
-                  textAnchor="middle"
-                >
-                  {p.label}
-                </SvgText>
-              )}
-            </G>
-          ))}
+            ) : null
+          )}
         </G>
       </Svg>
     </View>
+  );
+}
+
+/** Height of a flag pole, from the course's spot on the ground. */
+const POLE = 18;
+const CALLOUT_H = 30;
+const CALLOUT_MAX_W = 160;
+
+/** Callout geometry, sized from the text since SVG text can't be measured. */
+function calloutFor(name: string, detail: string, cx: number, cy: number) {
+  const label = name.length > 30 ? `${name.slice(0, 29)}…` : name;
+  const w = Math.min(CALLOUT_MAX_W, Math.max(label.length * 5.1, detail.length * 4.3) + 18);
+  return { x: cx - w / 2, y: cy - POLE - 6 - CALLOUT_H, w, h: CALLOUT_H, label };
+}
+
+/** A golf flag planted at (cx, cy): shadow, pole and pennant. */
+function FlagPin({ cx, cy, color }: { cx: number; cy: number; color: string }) {
+  const top = cy - POLE;
+  return (
+    <G>
+      <Ellipse cx={cx} cy={cy} rx={3.4} ry={1.3} fill="#000" opacity={0.45} />
+      <Line
+        x1={cx}
+        y1={cy}
+        x2={cx}
+        y2={top}
+        stroke={GLOBE_COLORS.pinLabel}
+        strokeWidth={1.3}
+        strokeLinecap="round"
+      />
+      <Path
+        d={`M${cx + 0.6} ${top} L${cx + 11} ${top + 3.6} L${cx + 0.6} ${top + 7.2} Z`}
+        fill={color}
+      />
+      <Circle cx={cx} cy={cy} r={1.6} fill={color} />
+    </G>
+  );
+}
+
+/** Floating box above a flag with the course name and its status. */
+function Callout({
+  x,
+  y,
+  w,
+  h,
+  label,
+  detail,
+  color,
+}: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string;
+  detail: string;
+  color: string;
+}) {
+  return (
+    <G>
+      <Rect
+        x={x}
+        y={y}
+        width={w}
+        height={h}
+        rx={7}
+        fill={GLOBE_COLORS.callout}
+        stroke={GLOBE_COLORS.calloutEdge}
+        strokeWidth={1}
+      />
+      <SvgText
+        x={x + w / 2}
+        y={y + 12.5}
+        fill={GLOBE_COLORS.pinLabel}
+        fontSize={9}
+        fontFamily="Manrope_600SemiBold"
+        fontWeight="600"
+        textAnchor="middle"
+      >
+        {label}
+      </SvgText>
+      <SvgText
+        x={x + w / 2}
+        y={y + 23.5}
+        fill={color}
+        fontSize={7.5}
+        fontFamily="Manrope_600SemiBold"
+        fontWeight="600"
+        textAnchor="middle"
+      >
+        {detail}
+      </SvgText>
+    </G>
   );
 }

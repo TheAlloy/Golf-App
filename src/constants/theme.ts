@@ -63,6 +63,8 @@ export const GLOBE_COLORS = {
   pin: 'hsl(82, 78%, 58%)',
   wishlist: 'hsl(330, 90%, 68%)',
   pinLabel: 'hsl(210, 24%, 88%)',
+  callout: 'hsla(222, 40%, 8%, 0.92)',
+  calloutEdge: 'hsla(215, 30%, 80%, 0.14)',
 };
 
 /** Medal colours for achievement tiers. */

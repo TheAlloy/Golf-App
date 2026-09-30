@@ -7,7 +7,8 @@ import {
   Manrope_700Bold,
   useFonts,
 } from '@expo-google-fonts/manrope';
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, ThemeProvider } from 'expo-router';
+import Stack from 'expo-router/js-stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
@@ -39,7 +40,10 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: colors.background },
           headerTitleStyle: { fontFamily: 'Manrope_600SemiBold', color: colors.foreground },
           headerTintColor: colors.primary,
-          contentStyle: { backgroundColor: colors.background },
+          cardStyle: { backgroundColor: colors.background },
+          // Every page change is a cross-fade. The JS stack is used because
+          // it animates on the web too; the native one only does on devices.
+          animation: 'fade',
           headerLeft: () => <HeaderBack />,
         }}
       >
@@ -48,12 +52,10 @@ export default function RootLayout() {
         <Stack.Screen name="friends" options={{ title: 'Friends' }} />
         <Stack.Screen name="coverage" options={{ title: 'Course coverage' }} />
         <Stack.Screen name="log-round" options={{
-            presentation: 'modal',
             title: 'Log a round',
             headerLeft: () => <HeaderBack variant="close" />,
           }} />
         <Stack.Screen name="add-course" options={{
-            presentation: 'modal',
             title: 'Add a course',
             headerLeft: () => <HeaderBack variant="close" />,
           }} />

@@ -91,12 +91,13 @@ export default function HomeScreen() {
 
   const markers: GlobeMarker[] = useMemo(
     () => [
-      ...playedCourses.map(({ course }) => ({
+      ...playedCourses.map(({ course, rounds: count }) => ({
         id: course.id,
         latitude: course.coordinate.latitude,
         longitude: course.coordinate.longitude,
         label: course.name,
         kind: 'played' as const,
+        detail: `Played · ${count} round${count === 1 ? '' : 's'}`,
       })),
       ...wishedCourses.map((course) => ({
         id: course.id,
@@ -104,6 +105,7 @@ export default function HomeScreen() {
         longitude: course.coordinate.longitude,
         label: course.name,
         kind: 'wishlist' as const,
+        detail: 'On your wishlist',
       })),
     ],
     [playedCourses, wishedCourses]
