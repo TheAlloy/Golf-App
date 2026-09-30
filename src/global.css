@@ -12,44 +12,44 @@
  * are HSL triplets because React Native's parser has no oklch support.
  */
 :root {
-  /* Deep space background, very slightly blue. */
-  --background: 222 47% 4%;
-  --foreground: 210 20% 98%;
+  /* Near-black ground with true neutral greys above it; lime is the only hue. */
+  --background: 0 0% 3%;
+  --foreground: 0 0% 98%;
 
-  /* Cards sit just above the ground with a cool cast. */
-  --card: 222 40% 8%;
-  --card-foreground: 210 20% 98%;
-  --card-elevated: 222 36% 11%;
+  /* Cards sit just above the ground. */
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 98%;
+  --card-elevated: 0 0% 10.5%;
 
-  --popover: 222 40% 8%;
-  --popover-foreground: 210 20% 98%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 98%;
 
   /* Lime: the signature accent, used for scores, actions and the brand mark. */
   --primary: 82 78% 55%;
-  --primary-foreground: 222 47% 6%;
+  --primary-foreground: 0 0% 5%;
 
-  --secondary: 222 30% 14%;
-  --secondary-foreground: 210 20% 98%;
+  --secondary: 0 0% 13%;
+  --secondary-foreground: 0 0% 98%;
 
-  --muted: 222 30% 14%;
-  --muted-foreground: 215 16% 62%;
+  --muted: 0 0% 13%;
+  --muted-foreground: 0 0% 60%;
 
   --accent: 82 78% 55%;
-  --accent-foreground: 222 47% 6%;
+  --accent-foreground: 0 0% 5%;
 
   --destructive: 0 84% 60%;
-  --destructive-foreground: 210 20% 98%;
+  --destructive-foreground: 0 0% 98%;
 
-  --border: 222 26% 17%;
-  --input: 222 26% 17%;
+  --border: 0 0% 16%;
+  --input: 0 0% 16%;
   --ring: 82 78% 55%;
 
   /* Supporting hues for stats and heat, kept off the lime accent. */
   --info: 199 89% 58%;
   --warm: 33 96% 58%;
-  --heat-low: 246 80% 60%;
-  --heat-mid: 291 70% 62%;
-  --heat-high: 33 96% 58%;
+  --heat-low: 145 62% 36%;
+  --heat-mid: 88 78% 50%;
+  --heat-high: 62 96% 62%;
 
   --radius: 1rem;
 }

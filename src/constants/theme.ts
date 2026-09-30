@@ -21,15 +21,15 @@ export type ThemeColors = {
 };
 
 export const colors: ThemeColors = {
-    background: 'hsl(222, 47%, 4%)',
-    foreground: 'hsl(210, 20%, 98%)',
-    card: 'hsl(222, 40%, 8%)',
-    cardElevated: 'hsl(222, 36%, 11%)',
+    background: 'hsl(0, 0%, 3%)',
+    foreground: 'hsl(0, 0%, 98%)',
+    card: 'hsl(0, 0%, 7%)',
+    cardElevated: 'hsl(0, 0%, 10.5%)',
     primary: 'hsl(82, 78%, 55%)',
-    primaryForeground: 'hsl(222, 47%, 6%)',
-    muted: 'hsl(222, 30%, 14%)',
-    mutedForeground: 'hsl(215, 16%, 62%)',
-    border: 'hsl(222, 26%, 17%)',
+    primaryForeground: 'hsl(0, 0%, 5%)',
+    muted: 'hsl(0, 0%, 13%)',
+    mutedForeground: 'hsl(0, 0%, 60%)',
+    border: 'hsl(0, 0%, 16%)',
     destructive: 'hsl(0, 84%, 60%)',
     info: 'hsl(199, 89%, 58%)',
     warm: 'hsl(33, 96%, 58%)',
@@ -45,46 +45,47 @@ export function useThemeColors(): ThemeColors {
 }
 
 /**
- * Heat ramp for the globe. A region glows further along the ramp the more
- * courses you have played there: indigo for a first visit, magenta as it
- * fills in, amber for a home patch you know inside out.
+ * Heat ramp for the globe, in the lime family so it sits with the accent. A
+ * region glows further along the ramp the more courses you have played
+ * there: deep green for a first visit, lime as it fills in, yellow-green for
+ * a home patch you know inside out.
  */
-export const HEAT_STOPS = ['hsl(248, 84%, 62%)', 'hsl(295, 78%, 60%)', 'hsl(35, 98%, 60%)'];
+export const HEAT_STOPS = ['hsl(145, 62%, 36%)', 'hsl(88, 78%, 50%)', 'hsl(62, 96%, 62%)'];
 
 export const GLOBE_COLORS = {
-  oceanHigh: 'hsl(222, 46%, 13%)',
-  ocean: 'hsl(223, 48%, 8%)',
-  oceanDeep: 'hsl(226, 56%, 4%)',
-  land: 'hsl(217, 28%, 18%)',
-  landStroke: 'hsl(212, 26%, 28%)',
-  graticule: 'hsl(220, 30%, 14%)',
-  atmosphere: 'hsl(206, 92%, 62%)',
-  limb: 'hsl(203, 90%, 72%)',
+  oceanHigh: 'hsl(0, 0%, 11%)',
+  ocean: 'hsl(0, 0%, 6.5%)',
+  oceanDeep: 'hsl(0, 0%, 3%)',
+  land: 'hsl(0, 0%, 17%)',
+  landStroke: 'hsl(0, 0%, 27%)',
+  graticule: 'hsl(0, 0%, 12%)',
+  atmosphere: 'hsl(0, 0%, 82%)',
+  limb: 'hsl(0, 0%, 72%)',
   pin: 'hsl(82, 78%, 58%)',
   wishlist: 'hsl(330, 90%, 68%)',
-  pinLabel: 'hsl(210, 24%, 88%)',
-  callout: 'hsla(222, 40%, 8%, 0.92)',
-  calloutEdge: 'hsla(215, 30%, 80%, 0.14)',
+  pinLabel: 'hsl(0, 0%, 90%)',
+  callout: 'hsla(0, 0%, 6%, 0.92)',
+  calloutEdge: 'hsla(0, 0%, 100%, 0.12)',
 };
 
 /** Medal colours for achievement tiers. */
 export const TIER_COLORS = {
   bronze: 'hsl(28, 62%, 55%)',
-  silver: 'hsl(214, 18%, 74%)',
+  silver: 'hsl(0, 0%, 74%)',
   gold: 'hsl(45, 96%, 58%)',
 };
 
 /** Translucent medal fills behind earned badges. */
 export const TIER_TINTS = {
   bronze: 'hsla(28, 62%, 55%, 0.18)',
-  silver: 'hsla(214, 18%, 74%, 0.18)',
+  silver: 'hsla(0, 0%, 74%, 0.18)',
   gold: 'hsla(45, 96%, 58%, 0.18)',
 };
 
 /** Floating tab bar and its log-a-round button. */
 export const NAV_COLORS = {
-  pill: 'hsl(222, 28%, 8%)',
-  pillEdge: 'hsla(215, 30%, 80%, 0.06)',
-  icon: 'hsla(210, 20%, 98%, 0.45)',
-  iconActive: 'hsl(210, 20%, 98%)',
+  pill: 'hsl(0, 0%, 7%)',
+  pillEdge: 'hsla(0, 0%, 100%, 0.07)',
+  icon: 'hsla(0, 0%, 100%, 0.45)',
+  iconActive: 'hsl(0, 0%, 98%)',
 };
