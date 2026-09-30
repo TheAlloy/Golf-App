@@ -247,7 +247,7 @@ export default function LogRoundScreen() {
         <Text className="mt-2 font-semibold text-sm">Played with</Text>
         {friends.length === 0 ? (
           <Text className="text-sm text-muted-foreground">
-            Add friends from Stats to tag playing partners.
+            Add friends from your Profile to tag playing partners.
           </Text>
         ) : (
           <View className="flex-row flex-wrap items-center gap-2">

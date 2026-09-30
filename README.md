@@ -9,7 +9,9 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 
 ## What's built
 
-- **Globe** — the whole app. An orthographic world globe (d3-geo + SVG) that
+- **Four tabs** — Home, Explore, Trophies and Profile, split around a raised
+  **+** that logs a round from anywhere.
+- **Globe** (Home) — an orthographic world globe (d3-geo + SVG) that
   starts dark and lights up only where you have played: each area you know
   glows further along a heat ramp the more courses you tick off there. Drag to
   spin, pinch or use the controls to zoom, tap a glow to open the course.
@@ -18,11 +20,16 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
   hole-by-hole par and stroke index, plus 60 curated international courses.
   Full UK/European coverage is one command away — see
   [docs/course-catalogue.md](docs/course-catalogue.md).
-- **Rounds** — date, 9/18 holes, gross score and to-par, occasion, tags,
-  notes, photos, and playing partners.
+- **Explore** — search the catalogue or browse by region (rarest first) and
+  heart courses onto your wishlist.
+- **Trophies** — points, levels, wishlist quests and tiered achievements.
+  A wishlisted course scores double the first time you play it after adding
+  it (`src/lib/progression.ts`, `src/lib/wishlist.ts`).
 - **Rounds** — log a final score, or go hole by hole with strokes, putts and
-  fairways. Greens in regulation are calculated, not asked for.
-- **Stats** — fairways, GIR, putts per hole, achievements and friends.
+  fairways. Greens in regulation are calculated, not asked for. Also date,
+  9/18 holes, occasion, tags, notes, photos and playing partners.
+- **Profile** — calculated handicap, shot quality (fairways, GIR, putts),
+  recent rounds and friends.
 - **Handicap** — derived from your rounds using the World Handicap System's
   method (best 8 of the last 20), with score-against-par standing in for the
   licensed course rating and slope.
@@ -71,15 +78,17 @@ the globe renders on web; only the course pin map is native-only.
 ```
 src/
   app/            expo-router screens
-    index.tsx     the globe — the home screen
-    stats.tsx     shot quality, achievements, friends
-    profile.tsx   calculated handicap and totals
+    (tabs)/       bottom-tab screens
+      index.tsx     Home: the globe
+      explore.tsx   course search, regions, wishlist
+      trophies.tsx  points, levels, quests, achievements
+      profile.tsx   handicap, shot quality, rounds, friends
     log-round.tsx modal: final score or hole by hole
     round/[id]    round detail with scorecard grid
     course/[id]   course detail
-  components/     globe, scorecard entry, ui primitives
+  components/     globe, tab bar, course card, scorecard entry, ui primitives
   data/           courses.json — the generated course catalogue
-  lib/            points, stats, heat binning, popularity, supabase
+  lib/            points, progression, wishlist, stats, handicap, heat binning
   store/          zustand store (only user data is persisted)
 scripts/               catalogue build + OpenStreetMap importer
 supabase/migrations/   Postgres schema + RLS for the backend

@@ -39,9 +39,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="stats" options={{ title: 'Stats' }} />
-        <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Home' }} />
         <Stack.Screen name="rounds" options={{ title: 'Rounds' }} />
         <Stack.Screen name="friends" options={{ title: 'Friends' }} />
         <Stack.Screen name="coverage" options={{ title: 'Course coverage' }} />

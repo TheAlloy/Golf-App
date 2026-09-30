@@ -24,8 +24,11 @@ export type Course = {
   holes: number;
   /** Access type from the source data: Public, Private, Resort, Municipal… */
   type: string;
-  /** Par for each hole, when the source has it. Length 9 or 18. */
-  holePars?: number[];
+  /**
+   * Par for each hole, when the source has it. Index 0 is hole 1; a hole the
+   * source has no par for is undefined.
+   */
+  holePars?: (number | undefined)[];
   /**
    * Estimated share (0–100) of golfers who have played here. Drives rarity
    * points: the lower, the more a round is worth. Until real play counts
@@ -73,6 +76,13 @@ export type Round = {
   /** Hole-by-hole detail, when the user filled in a scorecard. */
   holeScores?: HoleScore[];
   createdAt: string;
+};
+
+/** A course the user wants to play. */
+export type WishlistItem = {
+  courseId: string;
+  /** ISO timestamp. Only rounds logged after this count as ticking it off. */
+  addedAt: string;
 };
 
 export type Profile = {

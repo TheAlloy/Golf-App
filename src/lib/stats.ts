@@ -22,7 +22,7 @@ export function girForHole(hole: HoleScore | undefined, par: number | undefined)
 }
 
 /** Roll up hole-by-hole detail across every round that has a scorecard. */
-export function aggregateStats(rounds: Round[], pars?: Map<string, number[] | undefined>): AggregateStats {
+export function aggregateStats(rounds: Round[], pars?: Map<string, (number | undefined)[] | undefined>): AggregateStats {
   const totals: AggregateStats = {
     fairwaysHit: 0,
     fairwayChances: 0,

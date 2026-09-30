@@ -22,10 +22,15 @@ const ROWS = COURSE_ROWS as Row[];
 
 export const CATALOGUE_COUNT = ROWS.length;
 
-function parseHolePars(digits: string, holes: number): number[] | undefined {
+function parseHolePars(digits: string, holes: number): (number | undefined)[] | undefined {
   if (!digits) return undefined;
-  const pars = digits.split('').map(Number).filter((n) => n > 0);
-  return pars.length ? pars.slice(0, holes) : undefined;
+  // A 0 marks a hole the source has no par for. Keep it as a gap rather than
+  // dropping it, or every later hole would shift onto the wrong par.
+  const pars = Array.from({ length: holes }, (_, i) => {
+    const n = Number(digits[i]);
+    return n >= 3 && n <= 6 ? n : undefined;
+  });
+  return pars.some((n) => n !== undefined) ? pars : undefined;
 }
 
 function hydrate(row: Row): Course {
@@ -121,4 +126,75 @@ export function catalogueByCountry(): { country: string; count: number }[] {
   return [...counts.entries()]
     .map(([country, count]) => ({ country, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+/** Regions the Explore tab can browse. */
+export type ExploreRegion =
+  | 'featured'
+  | 'uk-ireland'
+  | 'europe'
+  | 'usa'
+  | 'asia-pacific'
+  | 'americas'
+  | 'africa';
+
+export const EXPLORE_REGIONS: { id: ExploreRegion; label: string }[] = [
+  { id: 'featured', label: 'Bucket list' },
+  { id: 'uk-ireland', label: 'UK & Ireland' },
+  { id: 'europe', label: 'Europe' },
+  { id: 'usa', label: 'USA' },
+  { id: 'asia-pacific', label: 'Asia-Pacific' },
+  { id: 'americas', label: 'Americas' },
+  { id: 'africa', label: 'Africa & Middle East' },
+];
+
+const UK_IRELAND = new Set(['Scotland', 'England', 'Wales', 'Northern Ireland', 'Ireland']);
+const MIDDLE_EAST = new Set(['United Arab Emirates', 'Qatar', 'Bahrain', 'Oman', 'Saudi Arabia']);
+const USA = 'United States of America';
+
+function inRegion(row: Row, region: ExploreRegion): boolean {
+  const country = row[6];
+  const continent = row[7];
+  switch (region) {
+    case 'featured':
+      // The hand-picked international seeds: the courses people travel for.
+      return row[0].startsWith('intl-');
+    case 'uk-ireland':
+      return UK_IRELAND.has(country);
+    case 'europe':
+      return continent === 'Europe' && !UK_IRELAND.has(country);
+    case 'usa':
+      return country === USA;
+    case 'asia-pacific':
+      return (continent === 'Asia' && !MIDDLE_EAST.has(country)) || continent === 'Australia';
+    case 'americas':
+      return (continent === 'North America' || continent === 'South America') && country !== USA;
+    case 'africa':
+      return continent === 'Africa' || MIDDLE_EAST.has(country);
+  }
+}
+
+const regionCache = new Map<ExploreRegion, Row[]>();
+
+/**
+ * Courses in a region, rarest (most points) first. Bucket-list courses keep
+ * their curated order.
+ */
+export function browseCatalogue(region: ExploreRegion, limit = 40): Course[] {
+  let rows = regionCache.get(region);
+  if (!rows) {
+    rows = ROWS.filter((r) => inRegion(r, region));
+    if (region !== 'featured') {
+      const pop = new Map(rows.map((r) => [r[0], popularityForType(r[10], r[8])]));
+      rows = [...rows].sort((a, b) => pop.get(a[0])! - pop.get(b[0])! || a[1].localeCompare(b[1]));
+    }
+    regionCache.set(region, rows);
+  }
+  return rows.slice(0, limit).map(hydrate);
+}
+
+/** Number of catalogue courses in a region. */
+export function regionCount(region: ExploreRegion): number {
+  browseCatalogue(region, 0);
+  return regionCache.get(region)!.length;
 }

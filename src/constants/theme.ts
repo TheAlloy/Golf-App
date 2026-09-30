@@ -63,3 +63,17 @@ export const GLOBE_COLORS = {
   pin: 'hsl(82, 78%, 58%)',
   pinLabel: 'hsl(210, 24%, 88%)',
 };
+
+/** Medal colours for achievement tiers. */
+export const TIER_COLORS = {
+  bronze: 'hsl(28, 62%, 55%)',
+  silver: 'hsl(214, 18%, 74%)',
+  gold: 'hsl(45, 96%, 58%)',
+};
+
+/** Translucent medal fills behind earned badges. */
+export const TIER_TINTS = {
+  bronze: 'hsla(28, 62%, 55%, 0.18)',
+  silver: 'hsla(214, 18%, 74%, 0.18)',
+  gold: 'hsla(45, 96%, 58%, 0.18)',
+};

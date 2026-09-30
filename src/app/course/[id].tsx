@@ -1,10 +1,14 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { WishlistButton } from '@/components/wishlist-button';
 import { coursePoints, repeatPlayPoints } from '@/lib/points';
+import { wishReward } from '@/lib/progression';
+import { wishlistProgress } from '@/lib/wishlist';
 import { useAppStore, useCourse } from '@/store/use-app-store';
 
 export default function CourseDetailScreen() {
@@ -13,6 +17,12 @@ export default function CourseDetailScreen() {
   const course = useCourse(id);
   const rounds = useAppStore((s) => s.rounds).filter((r) => r.courseId === id);
   const friends = useAppStore((s) => s.friends);
+  const allRounds = useAppStore((s) => s.rounds);
+  const wishlist = useAppStore((s) => s.wishlist);
+  const wish = useMemo(
+    () => wishlistProgress(wishlist.filter((w) => w.courseId === id), allRounds)[0],
+    [allRounds, id, wishlist]
+  );
 
   if (!course) {
     return (
@@ -32,10 +42,21 @@ export default function CourseDetailScreen() {
     <View className="flex-1 bg-background">
       <Stack.Screen options={{ title: course.name }} />
       <ScrollView contentContainerClassName="gap-2 p-4">
-        <Text className="text-3xl font-semibold text-foreground">{course.name}</Text>
-        <Text className="text-muted-foreground">
-          {[course.city, course.region || course.country].filter(Boolean).join(', ')}
-        </Text>
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1">
+            <Text className="text-3xl font-semibold text-foreground">{course.name}</Text>
+            <Text className="text-muted-foreground">
+              {[course.city, course.region || course.country].filter(Boolean).join(', ')}
+            </Text>
+          </View>
+          {wish?.completedRound ? (
+            <View className="mt-1 rounded-full bg-primary/20 px-3 py-1.5">
+              <Text className="font-semibold text-xs text-primary">Wishlist ✓</Text>
+            </View>
+          ) : (
+            <WishlistButton courseId={course.id} className="mt-1 h-11 w-11" />
+          )}
+        </View>
 
         <View className="my-2 flex-row gap-6">
           <Stat label="Par" value={String(course.par)} />
@@ -51,6 +72,17 @@ export default function CourseDetailScreen() {
                 ? `Worth ${coursePoints(course)} rarity points — only ~${course.popularity}% of golfers have played here`
                 : `Earned ${coursePoints(course)} pts here · +${repeatPlayPoints(course)} per repeat round`}
             </Text>
+            {wish && !wish.completedRound && (
+              <Text className="mt-1 font-bold text-sm text-primary-foreground">
+                On your wishlist: your next round here earns{' '}
+                {wishReward(course, rounds.length > 0)} pts, dream bonus included.
+              </Text>
+            )}
+            {!wish && (
+              <Text className="mt-1 text-xs text-primary-foreground">
+                Add it to your wishlist and the next round here scores double.
+              </Text>
+            )}
           </CardContent>
         </Card>
 

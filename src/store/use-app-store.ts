@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { findCatalogueCourse } from '@/data/course-catalogue';
-import { Course, Friend, LatLng, Profile, Round } from '@/models/types';
+import { Course, Friend, LatLng, Profile, Round, WishlistItem } from '@/models/types';
 
 export function makeId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -20,6 +20,7 @@ type AppState = {
   customCourses: Course[];
   rounds: Round[];
   friends: Friend[];
+  wishlist: WishlistItem[];
   profile: Profile;
 
   addCustomCourse: (input: {
@@ -34,6 +35,7 @@ type AppState = {
   deleteRound: (roundId: string) => void;
   addFriend: (input: { name: string; handicap?: number }) => Friend;
   removeFriend: (friendId: string) => void;
+  toggleWishlist: (courseId: string) => void;
   updateProfile: (patch: Partial<Profile>) => void;
 };
 
@@ -43,6 +45,7 @@ export const useAppStore = create<AppState>()(
       customCourses: [],
       rounds: [],
       friends: [],
+      wishlist: [],
       profile: { name: 'Golfer' },
 
       addCustomCourse: (input) => {
@@ -97,12 +100,25 @@ export const useAppStore = create<AppState>()(
           })),
         })),
 
+      toggleWishlist: (courseId) =>
+        set((s) => ({
+          wishlist: s.wishlist.some((w) => w.courseId === courseId)
+            ? s.wishlist.filter((w) => w.courseId !== courseId)
+            : [{ courseId, addedAt: new Date().toISOString() }, ...s.wishlist],
+        })),
+
       updateProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
     }),
     {
       name: 'golf-app-store',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<AppState>;
+        // v3 added the wishlist; older stores simply start with an empty one.
+        if (version < 3) return { ...state, wishlist: [] } as AppState;
+        return state as AppState;
+      },
     }
   )
 );
@@ -135,4 +151,20 @@ export function useCourses(ids: string[]): Map<string, Course> {
 export function usePlayedCourseIds(): Set<string> {
   const rounds = useAppStore((s) => s.rounds);
   return useMemo(() => new Set(rounds.map((r) => r.courseId)), [rounds]);
+}
+
+/** True when the course is on the user's wishlist. */
+export function useIsWishlisted(courseId: string | undefined): boolean {
+  return useAppStore((s) => !!courseId && s.wishlist.some((w) => w.courseId === courseId));
+}
+
+/**
+ * Everything the gamified screens read: rounds, the wishlist and every course
+ * either of them references, resolved in one go.
+ */
+export function usePlayerData() {
+  const rounds = useAppStore((s) => s.rounds);
+  const wishlist = useAppStore((s) => s.wishlist);
+  const courses = useCourses([...rounds.map((r) => r.courseId), ...wishlist.map((w) => w.courseId)]);
+  return { rounds, wishlist, courses };
 }

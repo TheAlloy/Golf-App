@@ -5,19 +5,25 @@ import { Pressable, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Globe, { GlobeMarker, MAX_ZOOM, MIN_ZOOM } from '@/components/globe';
+import { useTabBarSpace } from '@/components/tab-bar';
 import { Text } from '@/components/ui/text';
 import { colors, HEAT_STOPS } from '@/constants/theme';
 import { buildHeatCells } from '@/lib/heat-cells';
-import { useAppStore, useCourses, usePlayedCourseIds } from '@/store/use-app-store';
+import { computeProgression } from '@/lib/progression';
+import { usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
 
-  const rounds = useAppStore((s) => s.rounds);
+  const tabSpace = useTabBarSpace();
+  const { rounds, wishlist, courses } = usePlayerData();
   const playedIds = usePlayedCourseIds();
-  const courses = useCourses(rounds.map((r) => r.courseId));
+  const progression = useMemo(
+    () => computeProgression(rounds, courses, wishlist),
+    [courses, rounds, wishlist]
+  );
   const [zoom, setZoom] = useState(MIN_ZOOM);
 
   const playedCourses = useMemo(
@@ -79,31 +85,40 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Top toolbar */}
+      {/* Top bar: what this globe shows, and where you stand */}
       <View
         className="absolute left-0 right-0 flex-row items-center justify-between px-4"
         style={{ top: insets.top + 8 }}
       >
-        <ToolbarButton icon="stats-chart" onPress={() => router.push('/stats')} />
-        <View className="items-center">
-          <Text className="font-bold text-lg text-foreground">Global Play</Text>
+        <View>
+          <Text className="font-bold text-2xl text-foreground">Global Play</Text>
           <Text className="text-xs text-muted-foreground">
             {empty
               ? 'Nowhere yet'
               : `${playedIds.size} course${playedIds.size === 1 ? '' : 's'} · ${rounds.length} round${rounds.length === 1 ? '' : 's'}`}
           </Text>
         </View>
-        <ToolbarButton icon="person" onPress={() => router.push('/profile')} />
+        <Pressable
+          className="flex-row items-center gap-1.5 rounded-full bg-card/90 px-3 py-2 active:opacity-80"
+          onPress={() => router.push('/trophies')}
+          accessibilityLabel={`${progression.total} points, level ${progression.level.number}. Open trophies`}
+        >
+          <Ionicons name="sparkles" size={14} color={colors.warm} />
+          <Text className="font-bold text-sm text-foreground">
+            {progression.total.toLocaleString()}
+          </Text>
+          <Text className="text-xs text-muted-foreground">· Lv {progression.level.number}</Text>
+        </Pressable>
       </View>
 
       {/* Empty state: the world stays dark until something is logged. */}
       {empty && (
-        <View className="absolute inset-x-0 items-center px-6" style={{ bottom: insets.bottom + 190 }}>
-          <Text className="text-center font-semibold text-base text-foreground">
+        <View className="absolute left-4 right-20" style={{ bottom: tabSpace + 16 }}>
+          <Text className="font-semibold text-base text-foreground">
             Your world is dark
           </Text>
-          <Text className="mt-1 text-center text-sm text-muted-foreground">
-            Log a round and the place you played lights up. The more you play somewhere, the
+          <Text className="mt-1 text-sm text-muted-foreground">
+            Tap + to log a round and the place you played lights up. The more you play somewhere, the
             brighter it burns.
           </Text>
         </View>
@@ -113,7 +128,7 @@ export default function HomeScreen() {
       {!empty && (
         <View
           className="absolute left-4 rounded-xl bg-card/90 px-3 py-2"
-          style={{ bottom: insets.bottom + 96 }}
+          style={{ bottom: tabSpace + 16 }}
         >
           <Text className="text-xs text-muted-foreground">Courses played</Text>
           <View className="mt-1.5 flex-row items-center gap-2">
@@ -129,7 +144,7 @@ export default function HomeScreen() {
       )}
 
       {/* Zoom controls */}
-      <View className="absolute right-4 gap-2" style={{ bottom: insets.bottom + 96 }}>
+      <View className="absolute right-4 gap-2" style={{ bottom: tabSpace + 16 }}>
         <ToolbarButton
           icon="add"
           onPress={() => setZoom((z) => Math.min(MAX_ZOOM, z * 1.6))}
@@ -142,16 +157,6 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* The one action: add a round */}
-      <View className="absolute inset-x-0 items-center" style={{ bottom: insets.bottom + 20 }}>
-        <Pressable
-          className="h-16 w-16 items-center justify-center rounded-full bg-primary active:opacity-90"
-          onPress={() => router.push('/log-round')}
-          accessibilityLabel="Log a round"
-        >
-          <Ionicons name="add" size={32} color={colors.primaryForeground} />
-        </Pressable>
-      </View>
     </View>
   );
 }

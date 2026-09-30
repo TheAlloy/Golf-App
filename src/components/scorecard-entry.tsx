@@ -10,7 +10,7 @@ import { HoleScore } from '@/models/types';
 type Props = {
   holes: number;
   /** Par per hole from the course, when known. */
-  pars?: number[];
+  pars?: (number | undefined)[];
   value: HoleScore[];
   onChange: (next: HoleScore[]) => void;
 };
