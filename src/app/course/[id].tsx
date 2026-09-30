@@ -41,7 +41,7 @@ export default function CourseDetailScreen() {
   return (
     <View className="flex-1 bg-background">
       <Stack.Screen options={{ title: course.name }} />
-      <ScrollView contentContainerClassName="gap-2 p-4">
+      <ScrollView indicatorStyle="white" contentContainerClassName="gap-2 p-4">
         <View className="flex-row items-start gap-3">
           <View className="flex-1">
             <Text className="text-3xl font-semibold text-foreground">{course.name}</Text>

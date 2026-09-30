@@ -119,7 +119,10 @@ export default function LogRoundScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView contentContainerClassName="gap-2 p-4 pb-16" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        indicatorStyle="white"
+        contentContainerClassName="gap-2 p-4 pb-16"
+        keyboardShouldPersistTaps="handled">
         <Text className="font-semibold text-sm">Course</Text>
         {selectedCourse ? (
           <Pressable

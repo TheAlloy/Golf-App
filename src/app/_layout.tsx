@@ -12,8 +12,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
 import { colors } from '@/constants/theme';
+import { installOverlayScrollbars } from '@/lib/scrollbars';
 
 SplashScreen.preventAutoHideAsync();
+installOverlayScrollbars();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

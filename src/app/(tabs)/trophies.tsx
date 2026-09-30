@@ -52,7 +52,7 @@ export default function TrophiesScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView
+      <ScrollView indicatorStyle="white"
         contentContainerClassName="gap-4 px-4"
         contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: tabSpace + 24 }}
       >

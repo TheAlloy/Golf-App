@@ -143,7 +143,7 @@ export default function ExploreScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <FlatList
+      <FlatList indicatorStyle="white"
         data={results}
         keyExtractor={(c) => c.id}
         ListHeaderComponent={header}

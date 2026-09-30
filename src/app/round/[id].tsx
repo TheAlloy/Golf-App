@@ -47,7 +47,7 @@ export default function RoundDetailScreen() {
   return (
     <View className="flex-1 bg-background">
       <Stack.Screen options={{ title: 'Round Details' }} />
-      <ScrollView contentContainerClassName="gap-4 p-4">
+      <ScrollView indicatorStyle="white" contentContainerClassName="gap-4 p-4">
         {/* Summary card */}
         <View className="flex-row items-center gap-3 rounded-xl bg-card p-4">
           {round.photos[0] ? (

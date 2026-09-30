@@ -135,7 +135,7 @@ export default function HomeScreen() {
       </View>
 
       {view === 'list' && (
-        <SectionList
+        <SectionList indicatorStyle="white"
           className="absolute inset-0"
           sections={sections}
           keyExtractor={(pc) => pc.course.id}

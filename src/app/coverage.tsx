@@ -22,7 +22,7 @@ export default function CoverageScreen() {
   return (
     <View className="flex-1 bg-background">
       <Stack.Screen options={{ title: 'Course coverage' }} />
-      <ScrollView contentContainerClassName="gap-4 p-4">
+      <ScrollView indicatorStyle="white" contentContainerClassName="gap-4 p-4">
         <View className="rounded-xl bg-card p-4">
           <Text className="font-bold text-3xl text-primary">
             {CATALOGUE_COUNT.toLocaleString()}

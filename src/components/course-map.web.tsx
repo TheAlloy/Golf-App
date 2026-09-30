@@ -18,7 +18,7 @@ export default function CourseMap({ courses, playedCourseIds }: Props) {
   const sorted = [...courses].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <ScrollView contentContainerClassName="gap-2 p-4">
+    <ScrollView indicatorStyle="white" contentContainerClassName="gap-2 p-4">
       <Text className="mb-2 text-sm text-muted-foreground">
         The interactive map is available in the iOS/Android app. Course list shown on web:
       </Text>

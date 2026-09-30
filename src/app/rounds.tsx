@@ -53,7 +53,7 @@ export default function RoundsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <FlatList
+      <FlatList indicatorStyle="white"
         data={sorted}
         keyExtractor={(r) => r.id}
         renderItem={renderRound}

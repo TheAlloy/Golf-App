@@ -43,7 +43,10 @@ export default function AddCourseScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView contentContainerClassName="gap-2 p-4" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        indicatorStyle="white"
+        contentContainerClassName="gap-2 p-4"
+        keyboardShouldPersistTaps="handled">
         {hasPin && (
           <Text className="text-sm text-muted-foreground">
             Pin: {latitude.toFixed(4)}, {longitude.toFixed(4)}

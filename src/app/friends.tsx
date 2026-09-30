@@ -66,7 +66,7 @@ export default function FriendsScreen() {
         </Button>
       </View>
 
-      <FlatList
+      <FlatList indicatorStyle="white"
         data={friends}
         keyExtractor={(f) => f.id}
         renderItem={renderFriend}
