@@ -42,7 +42,7 @@ export function AppearanceButton({
       style={{
         width: SIZE,
         height: SIZE,
-        borderRadius: 12,
+        borderRadius: SIZE / 2,
         borderWidth: BORDER,
         borderColor: 'rgba(255, 255, 255, 0.92)',
         overflow: 'hidden',
