@@ -25,8 +25,7 @@ import * as topojson from 'topojson-client';
 import countries110m from 'world-atlas/countries-110m.json';
 import countries50m from 'world-atlas/countries-50m.json';
 
-import TileLayer, { ImageryStatus } from '@/components/tile-layer';
-import { BASEMAP, IMAGERY } from '@/lib/imagery';
+import TerrainLayer, { ImageryStatus } from '@/components/terrain-layer';
 import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 
 export const LAND = topojson.feature(
@@ -120,11 +119,11 @@ const STARS = (() => {
 
 export const MIN_ZOOM = 1;
 /**
- * Deep enough for street-level tiles (zoom 19–20 Web Mercator, ~0.3 m per
- * pixel on a phone). Both views stream tiles once zoomed in, so detail keeps
- * coming all the way down.
+ * Far enough that a single town fills the screen (~0.6 km per pixel). The
+ * bundled imagery and coastlines run out of detail well before this, so a
+ * deep zoom goes soft rather than stopping short.
  */
-export const MAX_ZOOM = 100_000;
+export const MAX_ZOOM = 64;
 
 /** Gap between the fully zoomed-out globe and the edges of the screen. */
 export const GLOBE_EDGE_PADDING = 24;
@@ -182,21 +181,6 @@ export default function Globe({
 }: Props) {
   const pal = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
   const terrain = appearance === 'terrain';
-  // Once streamed tiles are showing, the SVG leaves the disc to the GL layer.
-  // The status is remembered with the view it came from, so switching views
-  // never reads the other layer's state.
-  const [tileStatus, setTileStatus] = useState<{ view: string; status: ImageryStatus }>({
-    view: appearance,
-    status: 'idle',
-  });
-  const onTileStatus = useCallback(
-    (status: ImageryStatus) => {
-      setTileStatus({ view: appearance, status });
-      onImageryStatus?.(status);
-    },
-    [appearance, onImageryStatus]
-  );
-  const disc = terrain || (tileStatus.view === appearance && tileStatus.status === 'live');
   const [rotation, setRotation] = useState<[number, number]>([70, -15]);
   const rotationRef = useRef<[number, number]>([70, -15]);
   const gestureStart = useRef<[number, number]>([70, -15]);
@@ -577,21 +561,18 @@ export default function Globe({
 
   return (
     <View ref={container} {...(panHandlers ?? {})} style={{ width, height }}>
-      {/* Streamed tiles on the GPU: satellite for terrain, a dark street map for
-          the map view. Keyed so switching views starts a fresh layer. */}
-      <TileLayer
-        key={appearance}
-        width={width}
-        height={height}
-        cx={cx}
-        cy={cy}
-        radius={scale}
-        rotation={rotation}
-        source={terrain ? IMAGERY : BASEMAP}
-        fallback={terrain ? { kind: 'earth' } : { kind: 'flat', color: [0.06, 0.06, 0.06] }}
-        shaded={terrain}
-        onStatus={onTileStatus}
-      />
+      {/* Satellite imagery on the GPU; the SVG above it leaves the disc clear. */}
+      {terrain && (
+        <TerrainLayer
+          width={width}
+          height={height}
+          cx={cx}
+          cy={cy}
+          radius={scale}
+          rotation={rotation}
+          onStatus={onImageryStatus}
+        />
+      )}
       {/* Positioned so the vector layer paints above the absolutely placed GL canvas. */}
       <Svg width={width} height={height} style={{ position: 'relative', zIndex: 1 }}>
         <Defs>
@@ -617,7 +598,7 @@ export default function Globe({
 
         <G clipPath="url(#viewport)">
           {STARS.filter(
-            (st) => !disc || Math.hypot(st.x * width - cx, st.y * height - cy) > scale + 2
+            (st) => !terrain || Math.hypot(st.x * width - cx, st.y * height - cy) > scale + 2
           ).map((st, i) => (
             <Circle
               key={`s${i}`}
@@ -631,7 +612,7 @@ export default function Globe({
 
           {/* Halo, sphere, then a crisp limb so the edge reads as a horizon. */}
           <Circle cx={cx} cy={cy} r={scale * 1.05} fill="url(#atmosphere)" />
-          {!disc && <Circle cx={cx} cy={cy} r={scale} fill="url(#ocean)" />}
+          {!terrain && <Circle cx={cx} cy={cy} r={scale} fill="url(#ocean)" />}
           <Circle
             cx={cx}
             cy={cy}
@@ -642,23 +623,23 @@ export default function Globe({
             opacity={0.32}
           />
 
-          {!disc && <Path d={graticulePath} stroke={pal.graticule} strokeWidth={0.5} fill="none" />}
+          {!terrain && (
+            <Path d={graticulePath} stroke={pal.graticule} strokeWidth={0.5} fill="none" />
+          )}
 
           {/* Terrain only: imagery can fill the screen, so shade the header strip. */}
           {terrain && <Rect x={0} y={0} width={width} height={180} fill="url(#scrim)" />}
 
-          {/* Terrain keeps only faint borders over the imagery, like Earth does;
-              the street map draws its own, so it gets none. */}
-          {!(disc && !terrain) &&
-            landPaths.map((d, i) => (
-              <Path
-                key={`l${i}`}
-                d={d}
-                fill={terrain ? 'none' : pal.land}
-                stroke={pal.landStroke}
-                strokeWidth={terrain ? 0.4 : 0.5}
-              />
-            ))}
+          {/* Terrain keeps only faint borders over the imagery, like Earth does. */}
+          {landPaths.map((d, i) => (
+            <Path
+              key={`l${i}`}
+              d={d}
+              fill={terrain ? 'none' : pal.land}
+              stroke={pal.landStroke}
+              strokeWidth={terrain ? 0.4 : 0.5}
+            />
+          ))}
 
           {/* Where you've played, shaded over the land at the chosen level. */}
           {coveragePaths.map((d, i) => (

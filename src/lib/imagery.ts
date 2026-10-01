@@ -1,41 +1,28 @@
 /**
- * Streamed map tiles for the globe.
+ * Streamed satellite imagery for the terrain view.
  *
- * Both appearances sharpen with standard Web Mercator XYZ tiles as you zoom
- * in. The defaults are keyless, free-to-use sources with the most detail
- * available: Esri World Imagery for the terrain view and CARTO Dark Matter
- * (OpenStreetMap data) for the dark map. Both require their attribution to be
- * shown, which the app does over the globe. Point the env vars at another
- * provider to change either; see the README.
+ * Tiles are standard Web Mercator XYZ tiles. The default source is EOX's
+ * Sentinel-2 cloudless mosaic, which is free to use with attribution and needs
+ * no key, at roughly 10 m per pixel. Point the env vars at another provider
+ * (Esri, Mapbox, MapTiler, …) for sharper imagery; see the README.
  */
 
-export type TileSource = {
-  /** URL template with {z}, {x} and {y} placeholders; {s} picks a subdomain a–d. */
+export type ImagerySource = {
+  /** URL template with {z}, {x} and {y} placeholders. */
   template: string;
   /** Deepest tile zoom the provider serves. */
   maxZoom: number;
   /** Tile edge in pixels, 256 or 512. */
   tileSize: number;
-  /** Shown over the globe while these tiles are on screen. */
+  /** Shown over the globe while imagery is on screen. */
   attribution: string;
 };
 
-/** Kept for callers that predate the second source. */
-export type ImagerySource = TileSource;
-
-const DEFAULT_IMAGERY: TileSource = {
-  template:
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  maxZoom: 19,
+const DEFAULT_SOURCE: ImagerySource = {
+  template: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+  maxZoom: 14,
   tileSize: 256,
-  attribution: 'Esri, Maxar, Earthstar Geographics',
-};
-
-const DEFAULT_BASEMAP: TileSource = {
-  template: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-  maxZoom: 20,
-  tileSize: 256,
-  attribution: 'OpenStreetMap contributors, CARTO',
+  attribution: 'Sentinel-2 cloudless by EOX',
 };
 
 function envNumber(value: string | undefined, fallback: number): number {
@@ -43,53 +30,18 @@ function envNumber(value: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-type EnvOverrides = {
-  tiles?: string;
-  maxZoom?: string;
-  tileSize?: string;
-  attribution?: string;
+export const IMAGERY: ImagerySource = {
+  template: process.env.EXPO_PUBLIC_IMAGERY_TILES || DEFAULT_SOURCE.template,
+  maxZoom: envNumber(process.env.EXPO_PUBLIC_IMAGERY_MAX_ZOOM, DEFAULT_SOURCE.maxZoom),
+  tileSize: envNumber(process.env.EXPO_PUBLIC_IMAGERY_TILE_SIZE, DEFAULT_SOURCE.tileSize),
+  attribution: process.env.EXPO_PUBLIC_IMAGERY_ATTRIBUTION ?? DEFAULT_SOURCE.attribution,
 };
 
-// Expo inlines EXPO_PUBLIC_* only when each variable is named literally, so
-// the lookups are spelled out rather than built from a prefix.
-function fromEnv(env: EnvOverrides, fallback: TileSource): TileSource {
-  return {
-    template: env.tiles || fallback.template,
-    maxZoom: envNumber(env.maxZoom, fallback.maxZoom),
-    tileSize: envNumber(env.tileSize, fallback.tileSize),
-    attribution: env.attribution ?? fallback.attribution,
-  };
-}
+/** Set EXPO_PUBLIC_IMAGERY_TILES=off to disable streaming and keep the bundled texture. */
+export const IMAGERY_ENABLED = IMAGERY.template.toLowerCase() !== 'off';
 
-/** Satellite imagery for the terrain view. */
-export const IMAGERY: TileSource = fromEnv(
-  {
-    tiles: process.env.EXPO_PUBLIC_IMAGERY_TILES,
-    maxZoom: process.env.EXPO_PUBLIC_IMAGERY_MAX_ZOOM,
-    tileSize: process.env.EXPO_PUBLIC_IMAGERY_TILE_SIZE,
-    attribution: process.env.EXPO_PUBLIC_IMAGERY_ATTRIBUTION,
-  },
-  DEFAULT_IMAGERY
-);
-/** Dark street map for the map view. */
-export const BASEMAP: TileSource = fromEnv(
-  {
-    tiles: process.env.EXPO_PUBLIC_BASEMAP_TILES,
-    maxZoom: process.env.EXPO_PUBLIC_BASEMAP_MAX_ZOOM,
-    tileSize: process.env.EXPO_PUBLIC_BASEMAP_TILE_SIZE,
-    attribution: process.env.EXPO_PUBLIC_BASEMAP_ATTRIBUTION,
-  },
-  DEFAULT_BASEMAP
-);
-
-/** Set a source's TILES variable to `off` to disable streaming for that view. */
-export const isEnabled = (source: TileSource) => source.template.toLowerCase() !== 'off';
-export const IMAGERY_ENABLED = isEnabled(IMAGERY);
-export const BASEMAP_ENABLED = isEnabled(BASEMAP);
-
-export function tileUrl(source: TileSource, z: number, x: number, y: number): string {
-  return source.template
-    .replace('{s}', 'abcd'[(x + y) % 4])
+export function tileUrl(z: number, x: number, y: number): string {
+  return IMAGERY.template
     .replace('{z}', String(z))
     .replace('{x}', String(x))
     .replace('{y}', String(y));
@@ -148,13 +100,13 @@ function neededTiles(bounds: LonLatBounds, z: number): NeededRect {
  * Pick the tile zoom and atlas window for what's on screen. Drops a zoom level
  * while the visible area needs more tiles than the atlas holds, then centres
  * the atlas window on the visible tiles so there is room to pan before a
- * refill is needed. Null when tiles can't help (window off the mercator
+ * refill is needed. Null when imagery can't help (window off the mercator
  * range, or nothing to show).
  */
 export function planAtlas(
   bounds: LonLatBounds,
   radiusPx: number,
-  source: TileSource
+  source: ImagerySource
 ): { rect: TileRect; needed: NeededRect } | null {
   if (bounds[1][1] < -MERCATOR_MAX_LAT || bounds[0][1] > MERCATOR_MAX_LAT) return null;
   let z = zoomForRadius(radiusPx, source.tileSize, source.maxZoom);
@@ -167,7 +119,7 @@ export function planAtlas(
   const n = 2 ** z;
   const span = (a: number, b: number) => {
     const start = Math.round((a + b) / 2 - ATLAS_TILES / 2);
-    return Math.max(0, Math.min(Math.max(0, n - ATLAS_TILES), start));
+    return Math.max(0, Math.min(n - ATLAS_TILES, start));
   };
   return {
     rect: { z, x0: span(needed.x0, needed.x1), y0: span(needed.y0, needed.y1) },

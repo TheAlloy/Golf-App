@@ -5,7 +5,7 @@ import { Pressable, SectionList, useWindowDimensions, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
-import type { ImageryStatus } from '@/components/tile-layer';
+import type { ImageryStatus } from '@/components/terrain-layer';
 import {
   APPEARANCE_BUTTON_SIZE,
   AppearanceButton,
@@ -18,7 +18,7 @@ import { Text } from '@/components/ui/text';
 import { colors, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
 import { CoverageLevel, coverageNote, coverageShapes } from '@/lib/coverage';
-import { BASEMAP, IMAGERY, isEnabled } from '@/lib/imagery';
+import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
 import { usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
@@ -62,7 +62,6 @@ export default function HomeScreen() {
   const [appearance, setAppearance] = useState<MapAppearance>('map');
   const palette = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
   const [imagery, setImagery] = useState<ImageryStatus>('idle');
-  const tileSource = appearance === 'terrain' ? IMAGERY : BASEMAP;
   // "Where I've played" shading; only the dark map draws it.
   const [coverageLevel, setCoverageLevel] = useState<CoverageLevel>('off');
   const showCoverage = view === 'map' && appearance === 'map';
@@ -283,10 +282,7 @@ export default function HomeScreen() {
           {view === 'map' && (
             <AppearanceButton
               appearance={appearance}
-              onPress={() => {
-                setAppearance(appearance === 'map' ? 'terrain' : 'map');
-                setImagery('idle');
-              }}
+              onPress={() => setAppearance(appearance === 'map' ? 'terrain' : 'map')}
             />
           )}
         </View>
@@ -317,26 +313,22 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Tile providers ask to be credited while their tiles are on screen. */}
-      {view === 'map' &&
-        isEnabled(tileSource) &&
-        (imagery !== 'idle' || appearance === 'terrain') && (
-          <View
-            className="absolute right-4 rounded-md bg-background/60 px-2 py-1"
-            style={{ bottom: tabSpace + 16 }}
-            pointerEvents="none"
-          >
-            <Text className="text-[10px] text-muted-foreground">
-              {imagery === 'unavailable'
-                ? `${appearance === 'terrain' ? 'Satellite' : 'Map'} tiles blocked here`
-                : imagery === 'loading'
-                  ? 'Loading tiles…'
-                  : imagery === 'live'
-                    ? `© ${tileSource.attribution}`
-                    : 'Imagery © NASA Blue Marble'}
-            </Text>
-          </View>
-        )}
+      {/* Imagery providers ask to be credited while their tiles are on screen. */}
+      {view === 'map' && appearance === 'terrain' && IMAGERY_ENABLED && (
+        <View
+          className="absolute right-4 rounded-md bg-background/60 px-2 py-1"
+          style={{ bottom: tabSpace + 16 }}
+          pointerEvents="none"
+        >
+          <Text className="text-[10px] text-muted-foreground">
+            {imagery === 'unavailable'
+              ? 'Satellite tiles blocked here'
+              : imagery === 'loading'
+                ? 'Loading tiles…'
+                : `Imagery © ${IMAGERY.attribution}`}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

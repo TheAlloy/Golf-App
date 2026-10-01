@@ -76,33 +76,28 @@ npx expo start
 Scan the QR code with Expo Go (iOS/Android). `npx expo start --web` works too —
 the globe renders on web; only the course pin map is native-only.
 
-### Streamed map tiles
+### Satellite imagery
 
-Both globe views stream standard Web Mercator tiles as you zoom in, so detail
-keeps coming down to street level. The defaults are keyless and free to use
-with attribution, which the app shows over the globe:
+The terrain view wraps a bundled whole-earth texture onto the globe, then
+sharpens it with streamed Web Mercator tiles as you zoom in. Out of the box it
+streams EOX's Sentinel-2 cloudless mosaic (free with attribution, no key,
+~10 m per pixel). For sharper imagery point it at another provider with
+`EXPO_PUBLIC_*` variables (see `.env.example`):
 
-| View | Default source | `EXPO_PUBLIC_*` prefix | Max zoom |
+| Provider | `EXPO_PUBLIC_IMAGERY_TILES` | Max zoom | Notes |
 | --- | --- | --- | --- |
-| Terrain | Esri World Imagery (satellite) | `IMAGERY` | 19 |
-| Map | CARTO Dark Matter (OpenStreetMap data) | `BASEMAP` | 20 |
+| EOX Sentinel-2 (default) | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg` | 14 | Free, attribution required |
+| Esri World Imagery | `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` | 19 | Free tier needs an ArcGIS key for production |
+| Mapbox Satellite | `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=…` | 22 | Set tile size 512 |
+| MapTiler Satellite | `https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=…` | 20 | |
 
-Each source is configured by `<prefix>_TILES` (URL template with `{z}`, `{x}`,
-`{y}` and optional `{s}` for a–d subdomains), `<prefix>_MAX_ZOOM`,
-`<prefix>_TILE_SIZE` (256 or 512) and `<prefix>_ATTRIBUTION`; see
-`.env.example`. Set a `_TILES` value to `off` to disable streaming for that
-view: terrain then shows the bundled Blue Marble texture, the map stays the
-vector globe. Other providers that work the same way: Mapbox Satellite /
-Dark (`…?access_token=…`, max zoom 22, tile size 512 with `@2x`), MapTiler
-Satellite / Dataviz Dark (`…?key=…`, max zoom 20), Stadia Alidade Smooth Dark.
-Check each provider's terms: Esri and CARTO allow free use with attribution
-within fair-use limits; heavier traffic needs an account with them. Google's
-imagery is only available through Google's own Map Tiles API, which needs a
-billed Cloud project and a session-token flow this app doesn't implement.
-
-The whole-earth fallback and the terrain view work offline; the tiles need a
-network. The hosted claude.ai preview blocks requests to tile hosts, so tiles
-only show when the app is run directly (`npx expo start --web` or Expo Go).
+Set `EXPO_PUBLIC_IMAGERY_MAX_ZOOM`, `EXPO_PUBLIC_IMAGERY_TILE_SIZE` (256 or
+512) and `EXPO_PUBLIC_IMAGERY_ATTRIBUTION` to match, and show the provider's
+attribution as its terms require (the app prints it over the globe). Set
+`EXPO_PUBLIC_IMAGERY_TILES=off` to disable streaming and keep the bundled
+texture only. Google's imagery is only available through Google's own Map
+Tiles API, which needs a billed Cloud project and a session token flow this
+app doesn't implement.
 
 ## Project layout
 
@@ -139,12 +134,9 @@ US state and county outlines from [us-atlas](https://github.com/topojson/us-atla
 [world-countries](https://github.com/mledoze/countries) (ODbL).
 The terrain view uses NASA's
 [Blue Marble](https://visibleearth.nasa.gov/collection/1484/blue-marble) imagery
-(public domain), bundled as `assets/earth/blue-marble.jpg`. Streamed terrain
-tiles are [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9)
-(Esri, Maxar, Earthstar Geographics, and the GIS User Community); streamed map
-tiles are [CARTO Dark Matter](https://carto.com/basemaps/) over
-© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, unless
-configured otherwise.
+(public domain), bundled as `assets/earth/blue-marble.jpg`. Streamed tiles are
+[Sentinel-2 cloudless](https://s2maps.eu) by [EOX IT Services GmbH](https://eox.at)
+(contains modified Copernicus Sentinel data), unless configured otherwise.
 
 If you redistribute this app's data, ODbL requires you to attribute the source
 and share any modified database under the same licence.
