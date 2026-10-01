@@ -6,7 +6,7 @@ import { Platform, StyleSheet } from 'react-native';
 
 import {
   ATLAS_TILES,
-  cellOrder,
+  wantedCells,
   covers,
   IMAGERY,
   IMAGERY_ENABLED,
@@ -123,7 +123,12 @@ type AtlasState = {
   /** Bumped on every refill so stale downloads are dropped on arrival. */
   generation: number;
   loaded: boolean[];
+  /** Cells already queued or in flight, so a view update never double-requests. */
+  queued: Set<number>;
 };
+
+/** How long a zoom level has to hold before tiles for it are fetched. */
+const LEVEL_SETTLE_MS = 150;
 
 const MAX_PARALLEL = 6;
 const CACHE_LIMIT = 192;
@@ -229,6 +234,7 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
   // The download loop re-enters itself when a tile lands; a ref avoids a
   // callback referring to itself.
   const pumpRef = useRef<() => void>(() => {});
+  const settle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [ready, setReady] = useState(false);
 
   const onContextCreate = useCallback(async (gl: ExpoWebGLRenderingContext) => {
@@ -407,9 +413,29 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
     pumpRef.current = pump;
   }, [pump]);
 
+  useEffect(() => () => clearTimeout(settle.current), []);
+
   /** Point the atlas at a new window of tiles and start filling it. */
+  /** Queue any wanted cells that are neither loaded nor already requested. */
+  const ensure = useCallback(
+    (cells: [number, number][]) => {
+      const a = atlas.current;
+      if (!a) return;
+      let added = false;
+      for (const [i, j] of cells) {
+        const index = j * ATLAS_TILES + i;
+        if (a.loaded[index] || a.queued.has(index)) continue;
+        a.queued.add(index);
+        queue.current.push({ i, j, generation: a.generation });
+        added = true;
+      }
+      if (added) pump();
+    },
+    [pump]
+  );
+
   const refill = useCallback(
-    (rect: TileRect, order: [number, number][]) => {
+    (rect: TileRect, cells: [number, number][]) => {
       const s = scene.current;
       if (!s) return;
       const generation = (atlas.current?.generation ?? 0) + 1;
@@ -417,6 +443,7 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
         rect,
         generation,
         loaded: new Array(ATLAS_TILES * ATLAS_TILES).fill(false),
+        queued: new Set(),
       };
       const { gl } = s;
       gl.activeTexture(gl.TEXTURE2);
@@ -432,13 +459,10 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
         gl.UNSIGNED_BYTE,
         new Uint8Array(ATLAS_TILES * ATLAS_TILES)
       );
-      const n = 2 ** rect.z;
-      queue.current = order
-        .filter(([i, j]) => rect.x0 + i < n && rect.y0 + j < n)
-        .map(([i, j]) => ({ i, j, generation }));
-      pump();
+      queue.current = [];
+      ensure(cells);
     },
-    [pump]
+    [ensure]
   );
 
   useEffect(() => {
@@ -460,8 +484,18 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
       if (plan) {
         useTiles = true;
         const current = atlas.current;
-        if (!current || current.rect.z !== plan.rect.z || !covers(current.rect, plan.needed)) {
-          refill(plan.rect, cellOrder(plan.rect, plan.needed));
+        const cells = wantedCells(plan.rect, plan.needed);
+        if (!current) {
+          refill(plan.rect, cells);
+        } else if (current.rect.z !== plan.rect.z) {
+          // Mid-pinch the level changes every frame; wait for it to settle so
+          // only the level you land on is fetched.
+          clearTimeout(settle.current);
+          settle.current = setTimeout(() => refill(plan.rect, cells), LEVEL_SETTLE_MS);
+        } else if (!covers(current.rect, plan.needed)) {
+          refill(plan.rect, cells);
+        } else {
+          ensure(cells);
         }
       }
     }
@@ -483,7 +517,7 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
     };
     redraw.current = draw;
     draw();
-  }, [ready, width, height, cx, cy, radius, rotation, refill]);
+  }, [ready, width, height, cx, cy, radius, rotation, refill, ensure]);
 
   return (
     <GLView

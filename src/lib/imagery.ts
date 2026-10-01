@@ -138,25 +138,24 @@ export function covers(rect: TileRect, needed: NeededRect): boolean {
 }
 
 /**
- * Atlas cells in the order worth loading: the ones under the viewport first,
- * then rings outward so panning finds imagery already there.
+ * Atlas cells worth loading for this view: the tiles under the viewport plus
+ * a one-tile margin so a small pan finds imagery already there, nearest the
+ * centre first. The rest of the atlas is left empty until the view reaches it,
+ * which keeps tile requests (and provider quotas) proportional to what is seen.
  */
-export function cellOrder(rect: TileRect, needed: NeededRect): [number, number][] {
+export function wantedCells(rect: TileRect, needed: NeededRect): [number, number][] {
+  const n = 2 ** rect.z;
   const cx = (needed.x0 + needed.x1) / 2 - rect.x0;
   const cy = (needed.y0 + needed.y1) / 2 - rect.y0;
   const cells: [number, number][] = [];
-  for (let j = 0; j < ATLAS_TILES; j++) {
-    for (let i = 0; i < ATLAS_TILES; i++) cells.push([i, j]);
+  for (let y = needed.y0 - 1; y <= needed.y1 + 1; y++) {
+    for (let x = needed.x0 - 1; x <= needed.x1 + 1; x++) {
+      const i = x - rect.x0;
+      const j = y - rect.y0;
+      if (i < 0 || j < 0 || i >= ATLAS_TILES || j >= ATLAS_TILES) continue;
+      if (x < 0 || y < 0 || x >= n || y >= n) continue;
+      cells.push([i, j]);
+    }
   }
-  const inside = (i: number, j: number) =>
-    i + rect.x0 >= needed.x0 &&
-    i + rect.x0 <= needed.x1 &&
-    j + rect.y0 >= needed.y0 &&
-    j + rect.y0 <= needed.y1;
-  return cells.sort((a, b) => {
-    const ia = inside(a[0], a[1]) ? 0 : 1;
-    const ib = inside(b[0], b[1]) ? 0 : 1;
-    if (ia !== ib) return ia - ib;
-    return Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy);
-  });
+  return cells.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy));
 }
