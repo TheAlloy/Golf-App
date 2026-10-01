@@ -25,7 +25,7 @@ import * as topojson from 'topojson-client';
 import countries110m from 'world-atlas/countries-110m.json';
 import countries50m from 'world-atlas/countries-50m.json';
 
-import TerrainLayer from '@/components/terrain-layer';
+import TerrainLayer, { ImageryStatus } from '@/components/terrain-layer';
 import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 
 export const LAND = topojson.feature(
@@ -161,6 +161,8 @@ type Props = {
   initialCentre?: [number, number] | null;
   /** Dark map styling, or natural-colour terrain with sun shading. */
   appearance?: 'map' | 'terrain';
+  /** Streamed-imagery state, for the attribution chip in terrain view. */
+  onImageryStatus?: (status: ImageryStatus) => void;
 };
 
 export default function Globe({
@@ -172,6 +174,7 @@ export default function Globe({
   onSelectMarker,
   initialCentre = null,
   appearance = 'map',
+  onImageryStatus,
 }: Props) {
   const pal = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
   const terrain = appearance === 'terrain';
@@ -560,6 +563,7 @@ export default function Globe({
           cy={cy}
           radius={scale}
           rotation={rotation}
+          onStatus={onImageryStatus}
         />
       )}
       {/* Positioned so the vector layer paints above the absolutely placed GL canvas. */}

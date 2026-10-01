@@ -5,6 +5,7 @@ import { Pressable, SectionList, useWindowDimensions, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
+import type { ImageryStatus } from '@/components/terrain-layer';
 import { AppearanceButton, MapAppearance } from '@/components/appearance-button';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
@@ -54,6 +55,7 @@ export default function HomeScreen() {
   const [view, setView] = useState<HomeView>('map');
   const [appearance, setAppearance] = useState<MapAppearance>('map');
   const palette = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
+  const [imagery, setImagery] = useState<ImageryStatus>('idle');
 
   const playedCourses = useMemo(
     () =>
@@ -151,6 +153,7 @@ export default function HomeScreen() {
           onSelectMarker={onSelectMarker}
           initialCentre={initialCentre}
           appearance={appearance}
+          onImageryStatus={setImagery}
         />
       </View>
 
@@ -283,7 +286,13 @@ export default function HomeScreen() {
           style={{ bottom: tabSpace + 16 }}
           pointerEvents="none"
         >
-          <Text className="text-[10px] text-muted-foreground">Imagery © {IMAGERY.attribution}</Text>
+          <Text className="text-[10px] text-muted-foreground">
+            {imagery === 'unavailable'
+              ? 'Satellite tiles unavailable here · showing base imagery'
+              : imagery === 'loading'
+                ? 'Loading satellite tiles…'
+                : `Imagery © ${IMAGERY.attribution}`}
+          </Text>
         </View>
       )}
     </View>

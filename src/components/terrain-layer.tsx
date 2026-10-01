@@ -33,7 +33,20 @@ type Props = {
   radius: number;
   /** d3-geo rotation, degrees. */
   rotation: [number, number];
+  /** Told whenever streamed imagery changes state, for the attribution chip. */
+  onStatus?: (status: ImageryStatus) => void;
 };
+
+/**
+ * What the streamed tiles are doing: `idle` while the whole-earth texture is
+ * sharp enough on its own, `loading` once tiles are wanted, `live` after the
+ * first one lands, `unavailable` when they keep failing (offline, or a page
+ * that blocks the tile host).
+ */
+export type ImageryStatus = 'idle' | 'loading' | 'live' | 'unavailable';
+
+/** Consecutive failures before imagery is called unavailable. */
+const FAILURES_BEFORE_GIVING_UP = 4;
 
 const VERT = `
 attribute vec2 a_pos;
@@ -225,8 +238,20 @@ function visibleBounds(
  * keeps drawing borders, pins and labels on top; the SVG leaves the disc
  * transparent while this is mounted.
  */
-export default function TerrainLayer({ width, height, cx, cy, radius, rotation }: Props) {
+export default function TerrainLayer({ width, height, cx, cy, radius, rotation, onStatus }: Props) {
   const scene = useRef<Scene | null>(null);
+  const status = useRef<ImageryStatus>('idle');
+  const landed = useRef(0);
+  const failures = useRef(0);
+  const onStatusRef = useRef(onStatus);
+  useEffect(() => {
+    onStatusRef.current = onStatus;
+  }, [onStatus]);
+  const setStatus = useCallback((next: ImageryStatus) => {
+    if (status.current === next) return;
+    status.current = next;
+    onStatusRef.current?.(next);
+  }, []);
   const atlas = useRef<AtlasState | null>(null);
   const inFlight = useRef(0);
   const queue = useRef<{ i: number; j: number; generation: number }[]>([]);
@@ -395,19 +420,28 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
       loadTile(url, IMAGERY.tileSize)
         .then((tile) => {
           cachePut(url, tile);
+          landed.current += 1;
+          failures.current = 0;
+          setStatus('live');
           if (atlas.current?.generation === job.generation) {
             placeTile(job.i, job.j, tile);
             redraw.current();
           }
         })
-        .catch(() => failed.add(url))
+        .catch(() => {
+          failed.add(url);
+          failures.current += 1;
+          if (landed.current === 0 && failures.current >= FAILURES_BEFORE_GIVING_UP) {
+            setStatus('unavailable');
+          }
+        })
         .finally(() => {
           inFlight.current -= 1;
           pumpRef.current();
         });
     }
     redraw.current();
-  }, [placeTile]);
+  }, [placeTile, setStatus]);
 
   useEffect(() => {
     pumpRef.current = pump;
@@ -481,8 +515,11 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
     if (IMAGERY_ENABLED) {
       const bounds = visibleBounds(width, height, cx, cy, radius, rotation);
       const plan = bounds ? planAtlas(bounds, radius * k, IMAGERY) : null;
-      if (plan) {
+      if (!plan) {
+        if (status.current !== 'unavailable') setStatus('idle');
+      } else {
         useTiles = true;
+        if (status.current === 'idle') setStatus('loading');
         const current = atlas.current;
         const cells = wantedCells(plan.rect, plan.needed);
         if (!current) {
@@ -517,7 +554,7 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation }
     };
     redraw.current = draw;
     draw();
-  }, [ready, width, height, cx, cy, radius, rotation, refill, ensure]);
+  }, [ready, width, height, cx, cy, radius, rotation, refill, ensure, setStatus]);
 
   return (
     <GLView
