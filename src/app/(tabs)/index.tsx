@@ -8,13 +8,14 @@ import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
-import { colors, GLOBE_COLORS } from '@/constants/theme';
+import { colors, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
 import { usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
 
 type HomeView = 'map' | 'list';
+type MapAppearance = 'map' | 'terrain';
 
 type PlayedCourse = {
   course: Course;
@@ -50,6 +51,8 @@ export default function HomeScreen() {
   );
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [view, setView] = useState<HomeView>('map');
+  const [appearance, setAppearance] = useState<MapAppearance>('map');
+  const palette = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
 
   const playedCourses = useMemo(
     () =>
@@ -146,6 +149,7 @@ export default function HomeScreen() {
           onZoomChange={setZoom}
           onSelectMarker={onSelectMarker}
           initialCentre={initialCentre}
+          appearance={appearance}
         />
       </View>
 
@@ -250,6 +254,50 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Map / terrain toggle, bottom right of the globe */}
+      {view === 'map' && (
+        <View
+          className="absolute right-4 flex-row rounded-xl bg-card/90 p-1"
+          style={{ bottom: tabSpace + 16 }}
+          accessibilityRole="tablist"
+        >
+          {(
+            [
+              ['map', 'Map', 'map-outline'],
+              ['terrain', 'Terrain', 'layers-outline'],
+            ] as const
+          ).map(([v, label, icon]) => {
+            const active = appearance === v;
+            return (
+              <Pressable
+                key={v}
+                className={cn(
+                  'flex-row items-center gap-1 rounded-lg px-2.5 py-1',
+                  active ? 'bg-primary' : 'bg-transparent'
+                )}
+                onPress={() => setAppearance(v)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Ionicons
+                  name={icon}
+                  size={12}
+                  color={active ? colors.primaryForeground : colors.mutedForeground}
+                />
+                <Text
+                  className={cn(
+                    'font-semibold text-[11px]',
+                    active ? 'text-primary-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
       {/* Legend: what the two dot colours mean */}
       {(!empty || wishedCourses.length > 0) && view === 'map' && (
         <View
@@ -257,8 +305,8 @@ export default function HomeScreen() {
           style={{ bottom: tabSpace + 16 }}
         >
           <View className="flex-row items-center gap-3">
-            <LegendDot color={GLOBE_COLORS.pin} label="Played" />
-            <LegendDot color={GLOBE_COLORS.wishlist} label="Wishlist" />
+            <LegendDot color={palette.pin} label="Played" />
+            <LegendDot color={palette.wishlist} label="Wishlist" />
           </View>
         </View>
       )}

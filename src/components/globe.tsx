@@ -23,7 +23,7 @@ import Svg, {
 import * as topojson from 'topojson-client';
 import countries110m from 'world-atlas/countries-110m.json';
 
-import { GLOBE_COLORS } from '@/constants/theme';
+import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 
 const LAND = topojson.feature(
   countries110m as never,
@@ -84,6 +84,8 @@ type Props = {
   onSelectMarker?: (id: string) => void;
   /** Where the globe faces on first render, as [longitude, latitude]. */
   initialCentre?: [number, number] | null;
+  /** Dark map styling, or natural-colour terrain with sun shading. */
+  appearance?: 'map' | 'terrain';
 };
 
 export default function Globe({
@@ -94,7 +96,10 @@ export default function Globe({
   onZoomChange,
   onSelectMarker,
   initialCentre = null,
+  appearance = 'map',
 }: Props) {
+  const pal = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
+  const terrain = appearance === 'terrain';
   const [rotation, setRotation] = useState<[number, number]>([70, -15]);
   const rotationRef = useRef<[number, number]>([70, -15]);
   const gestureStart = useRef<[number, number]>([70, -15]);
@@ -464,15 +469,20 @@ export default function Globe({
       <Svg width={width} height={height}>
         <Defs>
           <RadialGradient id="ocean" cx="38%" cy="32%" r="72%">
-            <Stop offset="0%" stopColor={GLOBE_COLORS.oceanHigh} />
-            <Stop offset="62%" stopColor={GLOBE_COLORS.ocean} />
-            <Stop offset="100%" stopColor={GLOBE_COLORS.oceanDeep} />
+            <Stop offset="0%" stopColor={pal.oceanHigh} />
+            <Stop offset="62%" stopColor={pal.ocean} />
+            <Stop offset="100%" stopColor={pal.oceanDeep} />
           </RadialGradient>
           <RadialGradient id="atmosphere" cx="50%" cy="50%" r="50%">
-            <Stop offset="90%" stopColor={GLOBE_COLORS.atmosphere} stopOpacity="0" />
-            <Stop offset="96.5%" stopColor={GLOBE_COLORS.atmosphere} stopOpacity="0.16" />
-            <Stop offset="99%" stopColor={GLOBE_COLORS.atmosphere} stopOpacity="0.30" />
-            <Stop offset="100%" stopColor={GLOBE_COLORS.atmosphere} stopOpacity="0" />
+            <Stop offset="90%" stopColor={pal.atmosphere} stopOpacity="0" />
+            <Stop offset="96.5%" stopColor={pal.atmosphere} stopOpacity="0.16" />
+            <Stop offset="99%" stopColor={pal.atmosphere} stopOpacity="0.30" />
+            <Stop offset="100%" stopColor={pal.atmosphere} stopOpacity="0" />
+          </RadialGradient>
+          <RadialGradient id="shade" cx="36%" cy="32%" r="78%">
+            <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.16" />
+            <Stop offset="45%" stopColor="#ffffff" stopOpacity="0" />
+            <Stop offset="100%" stopColor="#000000" stopOpacity="0.38" />
           </RadialGradient>
           <ClipPath id="viewport">
             <Rect x="0" y="0" width={width} height={height} />
@@ -499,29 +509,33 @@ export default function Globe({
             cy={cy}
             r={scale}
             fill="none"
-            stroke={GLOBE_COLORS.limb}
+            stroke={pal.limb}
             strokeWidth={0.8}
             opacity={0.32}
           />
 
-          <Path d={graticulePath} stroke={GLOBE_COLORS.graticule} strokeWidth={0.5} fill="none" />
+          <Path d={graticulePath} stroke={pal.graticule} strokeWidth={0.5} fill="none" />
 
           {landPaths.map((d, i) => (
-            <Path
-              key={`l${i}`}
-              d={d}
-              fill={GLOBE_COLORS.land}
-              stroke={GLOBE_COLORS.landStroke}
-              strokeWidth={0.5}
-            />
+            <Path key={`l${i}`} d={d} fill={pal.land} stroke={pal.landStroke} strokeWidth={0.5} />
           ))}
 
+          {/* Terrain only: a lit side and a shadowed limb so the sphere reads as solid. */}
+          {terrain && <Circle cx={cx} cy={cy} r={scale} fill="url(#shade)" />}
+
           {pins.map((p) => {
-            const color = p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin;
+            const color = p.kind === 'wishlist' ? pal.wishlist : pal.pin;
             if (p.callout) return <FlagPin key={p.id} cx={p.cx} cy={p.cy} color={color} />;
             return (
               <G key={p.id}>
-                <Circle cx={p.cx} cy={p.cy} r={2.3} fill={color} />
+                <Circle
+                  cx={p.cx}
+                  cy={p.cy}
+                  r={2.3}
+                  fill={color}
+                  stroke={terrain ? 'rgba(0, 0, 0, 0.5)' : undefined}
+                  strokeWidth={0.8}
+                />
                 {zoom >= 3 && p.showLabel && (
                   <SvgText
                     x={p.cx}
@@ -546,7 +560,7 @@ export default function Globe({
                 key={`callout-${p.id}`}
                 {...p.callout}
                 detail={p.detail}
-                color={p.kind === 'wishlist' ? GLOBE_COLORS.wishlist : GLOBE_COLORS.pin}
+                color={p.kind === 'wishlist' ? pal.wishlist : pal.pin}
               />
             ) : null
           )}

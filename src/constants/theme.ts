@@ -61,6 +61,27 @@ export const GLOBE_COLORS = {
   calloutEdge: 'hsla(0, 0%, 100%, 0.12)',
 };
 
+export type GlobePalette = typeof GLOBE_COLORS;
+
+/**
+ * Terrain look: natural ocean blues and vegetation greens over the same
+ * geometry, with a sun-lit shading pass laid over the sphere. Pins, labels
+ * and callouts keep the map palette so they read the same in both.
+ */
+export const GLOBE_TERRAIN_COLORS: GlobePalette = {
+  ...GLOBE_COLORS,
+  oceanHigh: 'hsl(204, 58%, 36%)',
+  ocean: 'hsl(208, 62%, 24%)',
+  oceanDeep: 'hsl(214, 66%, 13%)',
+  land: 'hsl(96, 28%, 34%)',
+  landStroke: 'hsl(88, 26%, 46%)',
+  graticule: 'hsla(200, 60%, 80%, 0.10)',
+  atmosphere: 'hsl(200, 85%, 72%)',
+  limb: 'hsl(200, 70%, 72%)',
+  // Lifted so a played dot still reads against vegetation green.
+  pin: 'hsl(158, 80%, 46%)',
+};
+
 /** Medal colours for achievement tiers. */
 export const TIER_COLORS = {
   bronze: 'hsl(28, 62%, 55%)',
