@@ -84,8 +84,9 @@ export const TIER_TINTS = {
 
 /** Floating tab bar and its log-a-round button. */
 export const NAV_COLORS = {
-  pill: 'hsl(0, 0%, 7%)',
-  pillEdge: 'hsla(0, 0%, 100%, 0.07)',
-  icon: 'hsla(0, 0%, 100%, 0.45)',
+  pill: '#06402b',
+  pillEdge: 'hsla(150, 60%, 70%, 0.12)',
+  // A touch stronger than on black, so inactive icons still read on green.
+  icon: 'hsla(0, 0%, 100%, 0.55)',
   iconActive: 'hsl(0, 0%, 98%)',
 };
