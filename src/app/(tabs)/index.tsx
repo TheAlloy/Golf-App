@@ -288,9 +288,9 @@ export default function HomeScreen() {
         >
           <Text className="text-[10px] text-muted-foreground">
             {imagery === 'unavailable'
-              ? 'Satellite tiles unavailable here · showing base imagery'
+              ? 'Satellite tiles blocked here'
               : imagery === 'loading'
-                ? 'Loading satellite tiles…'
+                ? 'Loading tiles…'
                 : `Imagery © ${IMAGERY.attribution}`}
           </Text>
         </View>
