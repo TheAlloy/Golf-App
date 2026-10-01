@@ -45,14 +45,6 @@ export function useThemeColors(): ThemeColors {
   return colors;
 }
 
-/**
- * Heat ramp for the globe, in the lime family so it sits with the accent. A
- * region glows further along the ramp the more courses you have played
- * there: deep green for a first visit, lime as it fills in, yellow-green for
- * a home patch you know inside out.
- */
-export const HEAT_STOPS = ['hsl(145, 62%, 36%)', 'hsl(88, 78%, 50%)', 'hsl(62, 96%, 62%)'];
-
 export const GLOBE_COLORS = {
   oceanHigh: 'hsl(0, 0%, 11%)',
   ocean: 'hsl(0, 0%, 6.5%)',

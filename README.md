@@ -12,9 +12,8 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 - **Four tabs** — Home, Explore, Achievements and Profile, in a floating
   bar with a **+** in the middle that logs a round from anywhere.
 - **Globe** (Home) — an orthographic world globe (d3-geo + SVG) that
-  starts dark and lights up only where you have played: each area you know
-  glows further along a heat ramp the more courses you tick off there. Drag to
-  spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
+  starts dark and marks every course you have played in green and every
+  wishlisted one in lime yellow. Drag to spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
 - **Real course data** — 15,667 US courses from the
   [OpenGolfAPI](https://github.com/opengolfapi/data) open dataset, including
   hole-by-hole par and stroke index, plus 60 curated international courses.
@@ -88,7 +87,7 @@ src/
     course/[id]   course detail
   components/     globe, tab bar, course card, scorecard entry, ui primitives
   data/           courses.json — the generated course catalogue
-  lib/            points, progression, wishlist, stats, handicap, heat binning
+  lib/            points, progression, wishlist, stats, handicap
   store/          zustand store (only user data is persisted)
 scripts/               catalogue build + OpenStreetMap importer
 supabase/migrations/   Postgres schema + RLS for the backend

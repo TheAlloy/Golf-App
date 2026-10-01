@@ -23,8 +23,7 @@ import Svg, {
 import * as topojson from 'topojson-client';
 import countries110m from 'world-atlas/countries-110m.json';
 
-import { GLOBE_COLORS, HEAT_STOPS } from '@/constants/theme';
-import { HeatCell, heatIntensity } from '@/lib/heat-cells';
+import { GLOBE_COLORS } from '@/constants/theme';
 
 const LAND = topojson.feature(
   countries110m as never,
@@ -78,8 +77,6 @@ const ZOOM_EASE_MS = 90;
 type Props = {
   width: number;
   height: number;
-  /** Glow blobs, one per cluster of courses you have played. */
-  cells?: HeatCell[];
   /** Individual courses, revealed as you zoom in. */
   markers?: GlobeMarker[];
   zoom?: number;
@@ -92,7 +89,6 @@ type Props = {
 export default function Globe({
   width,
   height,
-  cells = [],
   markers = [],
   zoom = MIN_ZOOM,
   onZoomChange,
@@ -416,7 +412,7 @@ export default function Globe({
     };
   }, []);
 
-  const { landPaths, graticulePath, blobs, pins, glow } = useMemo(() => {
+  const { landPaths, graticulePath, pins } = useMemo(() => {
     const path = geoPath(projection);
     const centre: [number, number] = [-rotation[0], -rotation[1]];
     const visible = (lng: number, lat: number) => geoDistance([lng, lat], centre) < Math.PI / 2;
@@ -424,23 +420,6 @@ export default function Globe({
     const landPaths = LAND.features
       .map((f) => path(f as never))
       .filter((d): d is string => Boolean(d));
-
-    const blobs = cells
-      .filter((c) => visible(c.longitude, c.latitude))
-      .map((c) => {
-        const xy = projection([c.longitude, c.latitude]);
-        if (!xy) return null;
-        const t = heatIntensity(c.courses);
-        return {
-          cx: xy[0],
-          cy: xy[1],
-          // Blobs grow with the cluster and with zoom, so they stay readable.
-          r: (24 + t * 52) * Math.min(2.4, Math.sqrt(zoom)),
-          stop: t < 0.34 ? 0 : t < 0.7 ? 1 : 2,
-          core: 2 + t * 3.5,
-        };
-      })
-      .filter((d): d is NonNullable<typeof d> => d !== null);
 
     // Every course gets a dot at every zoom, green for played and lime yellow for
     // wishlisted, so the two always read apart; names wait for zoom 3.
@@ -477,12 +456,8 @@ export default function Globe({
       return { ...p, showLabel: clear, callout };
     });
 
-    // The heat glow gives the big picture; up close it would smother the
-    // flags, so it fades as you zoom in.
-    const glow = zoom <= 1.5 ? 1 : Math.max(0.2, 1 - (zoom - 1.5) / 4);
-
-    return { landPaths, graticulePath: path(GRATICULE as never) ?? '', blobs, pins, glow };
-  }, [cells, markers, projection, rotation, zoom]);
+    return { landPaths, graticulePath: path(GRATICULE as never) ?? '', pins };
+  }, [markers, projection, rotation, zoom]);
 
   return (
     <View ref={container} {...(panHandlers ?? {})}>
@@ -499,15 +474,6 @@ export default function Globe({
             <Stop offset="99%" stopColor={GLOBE_COLORS.atmosphere} stopOpacity="0.30" />
             <Stop offset="100%" stopColor={GLOBE_COLORS.atmosphere} stopOpacity="0" />
           </RadialGradient>
-          {/* One gradient per ramp stop, reused by every blob at that level. */}
-          {HEAT_STOPS.map((c, i) => (
-            <RadialGradient key={i} id={`heat${i}`} cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor={c} stopOpacity="0.85" />
-              <Stop offset="28%" stopColor={c} stopOpacity="0.42" />
-              <Stop offset="58%" stopColor={c} stopOpacity="0.16" />
-              <Stop offset="100%" stopColor={c} stopOpacity="0" />
-            </RadialGradient>
-          ))}
           <ClipPath id="viewport">
             <Rect x="0" y="0" width={width} height={height} />
           </ClipPath>
@@ -547,23 +513,6 @@ export default function Globe({
               fill={GLOBE_COLORS.land}
               stroke={GLOBE_COLORS.landStroke}
               strokeWidth={0.5}
-            />
-          ))}
-
-          {/* Soft glow first, bright core on top — the city-lights look. */}
-          <G opacity={glow}>
-            {blobs.map((b, i) => (
-              <Circle key={`g${i}`} cx={b.cx} cy={b.cy} r={b.r} fill={`url(#heat${b.stop})`} />
-            ))}
-          </G>
-          {blobs.map((b, i) => (
-            <Circle
-              key={`c${i}`}
-              cx={b.cx}
-              cy={b.cy}
-              r={b.core}
-              fill={HEAT_STOPS[b.stop]}
-              opacity={0.95}
             />
           ))}
 

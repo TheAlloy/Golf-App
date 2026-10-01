@@ -8,9 +8,8 @@ import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
-import { colors, GLOBE_COLORS, HEAT_STOPS } from '@/constants/theme';
+import { colors, GLOBE_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
-import { buildHeatCells } from '@/lib/heat-cells';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
 import { usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
@@ -68,8 +67,6 @@ export default function HomeScreen() {
         .filter((c) => c !== null),
     [courses, playedIds, rounds]
   );
-
-  const cells = useMemo(() => buildHeatCells(playedCourses), [playedCourses]);
 
   // Wishlisted courses you haven't played yet, as their own lime-yellow markers.
   const wishedCourses = useMemo(
@@ -144,7 +141,6 @@ export default function HomeScreen() {
         <Globe
           width={width}
           height={height}
-          cells={cells}
           markers={markers}
           zoom={zoom}
           onZoomChange={setZoom}
@@ -254,27 +250,16 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Legend: what the glow and the two dot colours mean */}
+      {/* Legend: what the two dot colours mean */}
       {(!empty || wishedCourses.length > 0) && view === 'map' && (
         <View
-          className="absolute left-4 gap-2 rounded-xl bg-card/90 px-3 py-2"
+          className="absolute left-4 rounded-xl bg-card/90 px-3 py-2"
           style={{ bottom: tabSpace + 16 }}
         >
           <View className="flex-row items-center gap-3">
             <LegendDot color={GLOBE_COLORS.pin} label="Played" />
             <LegendDot color={GLOBE_COLORS.wishlist} label="Wishlist" />
           </View>
-          {!empty && (
-            <View className="flex-row items-center gap-2">
-              <Text className="text-[10px] text-muted-foreground">1</Text>
-              <View className="h-1.5 w-20 flex-row overflow-hidden rounded-full">
-                {HEAT_STOPS.map((c) => (
-                  <View key={c} className="h-full flex-1" style={{ backgroundColor: c }} />
-                ))}
-              </View>
-              <Text className="text-[10px] text-muted-foreground">50+ courses</Text>
-            </View>
-          )}
         </View>
       )}
     </View>
