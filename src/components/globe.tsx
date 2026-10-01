@@ -1,4 +1,4 @@
-import { geoDistance, geoGraticule10, geoOrthographic, geoPath } from 'd3-geo';
+import { geoBounds, geoDistance, geoGraticule10, geoOrthographic, geoPath } from 'd3-geo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -23,6 +23,7 @@ import Svg, {
 } from 'react-native-svg';
 import * as topojson from 'topojson-client';
 import countries110m from 'world-atlas/countries-110m.json';
+import countries50m from 'world-atlas/countries-50m.json';
 
 import TerrainLayer from '@/components/terrain-layer';
 import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
@@ -31,6 +32,73 @@ export const LAND = topojson.feature(
   countries110m as never,
   (countries110m as never as { objects: { countries: never } }).objects.countries
 ) as unknown as GeoJSON.FeatureCollection;
+
+/** Zoom from which coastlines come from the 1:50m dataset instead of 1:110m. */
+const FINE_ZOOM = 4;
+
+// The finer coastlines are parsed on first use, since most sessions never
+// zoom far enough to need them.
+let fineLandCache: GeoJSON.FeatureCollection | null = null;
+function fineLand(): GeoJSON.FeatureCollection {
+  if (!fineLandCache) {
+    fineLandCache = topojson.feature(
+      countries50m as never,
+      (countries50m as never as { objects: { countries: never } }).objects.countries
+    ) as unknown as GeoJSON.FeatureCollection;
+  }
+  return fineLandCache;
+}
+
+type Bounds = [[number, number], [number, number]];
+const boundsCache = new WeakMap<GeoJSON.Feature, Bounds>();
+function boundsOf(f: GeoJSON.Feature): Bounds {
+  let b = boundsCache.get(f);
+  if (!b) {
+    b = geoBounds(f as never) as Bounds;
+    boundsCache.set(f, b);
+  }
+  return b;
+}
+
+/**
+ * The longitude/latitude window a fully zoomed-in viewport shows, or null when
+ * the globe's edge is on screen (then everything may be visible). Lets a deep
+ * zoom skip the countries that are nowhere near the screen.
+ */
+function visibleWindow(
+  invert: (p: [number, number]) => [number, number] | null,
+  width: number,
+  height: number
+): Bounds | null {
+  const corners: [number, number][] = [
+    [0, 0],
+    [width, 0],
+    [0, height],
+    [width, height],
+  ];
+  let lon0 = Infinity;
+  let lon1 = -Infinity;
+  let lat0 = Infinity;
+  let lat1 = -Infinity;
+  for (const c of corners) {
+    const g = invert(c);
+    if (!g) return null;
+    lon0 = Math.min(lon0, g[0]);
+    lon1 = Math.max(lon1, g[0]);
+    lat0 = Math.min(lat0, g[1]);
+    lat1 = Math.max(lat1, g[1]);
+  }
+  // Straddling the antimeridian or a pole: don't try to be clever.
+  if (lon1 - lon0 > 180) return null;
+  return [
+    [lon0, lat0],
+    [lon1, lat1],
+  ];
+}
+
+function overlaps(a: Bounds, b: Bounds): boolean {
+  return a[0][0] <= b[1][0] && a[1][0] >= b[0][0] && a[0][1] <= b[1][1] && a[1][1] >= b[0][1];
+}
 
 const GRATICULE = geoGraticule10();
 
@@ -50,7 +118,12 @@ const STARS = (() => {
 })();
 
 export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 8;
+/**
+ * Far enough that a single town fills the screen (~0.6 km per pixel). The
+ * bundled imagery and coastlines run out of detail well before this, so a
+ * deep zoom goes soft rather than stopping short.
+ */
+export const MAX_ZOOM = 64;
 
 /** Gap between the fully zoomed-out globe and the edges of the screen. */
 export const GLOBE_EDGE_PADDING = 24;
@@ -143,8 +216,13 @@ export default function Globe({
         .scale(scale)
         .translate([cx, cy])
         .rotate([rotation[0], rotation[1]])
-        .clipAngle(90),
-    [cx, cy, rotation, scale]
+        .clipAngle(90)
+        // Cut geometry to the screen so a deep zoom doesn't emit miles of path.
+        .clipExtent([
+          [0, 0],
+          [width, height],
+        ]),
+    [cx, cy, rotation, scale, width, height]
   );
 
   /** Turn a tap into the nearest visible marker, if one is close enough. */
@@ -424,7 +502,12 @@ export default function Globe({
     const centre: [number, number] = [-rotation[0], -rotation[1]];
     const visible = (lng: number, lat: number) => geoDistance([lng, lat], centre) < Math.PI / 2;
 
-    const landPaths = LAND.features
+    // Finer coastlines once zoomed in, and only the countries that can be on screen.
+    const fine = zoom >= FINE_ZOOM;
+    const source = fine ? fineLand() : LAND;
+    const win = fine ? visibleWindow((p) => projection.invert?.(p) ?? null, width, height) : null;
+    const landPaths = source.features
+      .filter((f) => !win || overlaps(boundsOf(f), win))
       .map((f) => path(f as never))
       .filter((d): d is string => Boolean(d));
 
@@ -464,7 +547,7 @@ export default function Globe({
     });
 
     return { landPaths, graticulePath: path(GRATICULE as never) ?? '', pins };
-  }, [markers, projection, rotation, zoom]);
+  }, [markers, projection, rotation, zoom, width, height]);
 
   return (
     <View ref={container} {...(panHandlers ?? {})} style={{ width, height }}>
