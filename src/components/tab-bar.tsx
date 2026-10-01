@@ -7,6 +7,8 @@ import { NAV_COLORS } from '@/constants/theme';
 
 /** Height of the floating pill. */
 export const TAB_BAR_HEIGHT = 64;
+/** Diameter of the darker disc that marks the selected tab. */
+const ACTIVE_DISC = 48;
 
 /** Gap between the pill and the bottom of the screen. */
 function barOffset(bottomInset: number): number {
@@ -58,11 +60,20 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
         accessibilityLabel={tab.label}
         hitSlop={4}
       >
-        <Ionicons
-          name={tab.icon}
-          size={25}
-          color={focused ? NAV_COLORS.iconActive : NAV_COLORS.icon}
-        />
+        <View
+          className="items-center justify-center rounded-full"
+          style={{
+            width: ACTIVE_DISC,
+            height: ACTIVE_DISC,
+            backgroundColor: focused ? NAV_COLORS.active : 'transparent',
+          }}
+        >
+          <Ionicons
+            name={tab.icon}
+            size={25}
+            color={focused ? NAV_COLORS.iconActive : NAV_COLORS.icon}
+          />
+        </View>
       </Pressable>
     );
   };

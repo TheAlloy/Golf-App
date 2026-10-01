@@ -106,4 +106,6 @@ export const NAV_COLORS = {
   // A touch stronger than on black, so inactive icons still read on green.
   icon: 'hsla(0, 0%, 100%, 0.55)',
   iconActive: 'hsl(0, 0%, 98%)',
+  // Disc behind the selected tab: the pill's green, deeper.
+  active: '#032a1c',
 };
