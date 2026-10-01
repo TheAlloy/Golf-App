@@ -12,6 +12,7 @@ import {
   MapAppearance,
 } from '@/components/appearance-button';
 import { CoveragePicker } from '@/components/coverage-picker';
+import { ProgressSummary } from '@/components/progress-summary';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
@@ -21,7 +22,7 @@ import { CoverageLevel, coverageNote, coverageShapes } from '@/lib/coverage';
 import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
-import { usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
+import { useAppStore, usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
 
 type HomeView = 'map' | 'list';
 
@@ -62,6 +63,8 @@ export default function HomeScreen() {
   const [appearance, setAppearance] = useState<MapAppearance>('map');
   const palette = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
   const [imagery, setImagery] = useState<ImageryStatus>('idle');
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const friendCount = useAppStore((s) => s.friends.length);
   // "Where I've played" shading; only the dark map draws it.
   const [coverageLevel, setCoverageLevel] = useState<CoverageLevel>('off');
   const showCoverage = view === 'map' && appearance === 'map';
@@ -226,8 +229,9 @@ export default function HomeScreen() {
           <Text className="font-bold text-2xl text-foreground">Global Play</Text>
           <Pressable
             className="flex-row items-center gap-1.5 rounded-full bg-card/90 px-3 py-2 active:opacity-80"
-            onPress={() => router.push('/achievements')}
-            accessibilityLabel={`${progression.total} points, level ${progression.level.number}. Open achievements`}
+            onPress={() => setSummaryOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`${progression.total} points, level ${progression.level.number}. Show summary`}
           >
             <Ionicons name="sparkles" size={14} color={colors.warm} />
             <Text className="font-bold text-sm text-foreground">
@@ -299,6 +303,16 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
+
+      <ProgressSummary
+        visible={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        progression={progression}
+        rounds={rounds}
+        courses={courses}
+        wishlist={wishlist}
+        friendCount={friendCount}
+      />
 
       {/* Legend: what the two dot colours mean */}
       {(!empty || wishedCourses.length > 0) && view === 'map' && (
