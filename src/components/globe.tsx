@@ -102,24 +102,6 @@ function overlaps(a: Bounds, b: Bounds): boolean {
 
 const GRATICULE = geoGraticule10();
 
-/** Deterministic star field — identical on every render and reload. */
-/** How far the star field moves relative to the globe's surface (0 = fixed sky). */
-const STAR_PARALLAX = 0.35;
-
-const STARS = (() => {
-  let seed = 20260827;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) % 4294967296;
-    return seed / 4294967296;
-  };
-  return Array.from({ length: 140 }, () => ({
-    x: rand(),
-    y: rand(),
-    r: 0.3 + rand() * 1.2,
-    o: 0.15 + rand() * 0.55,
-  }));
-})();
-
 export const MIN_ZOOM = 1;
 /**
  * Far enough that a single town fills the screen (~0.6 km per pixel). The
@@ -651,21 +633,6 @@ export default function Globe({
     return { landPaths, coveragePaths, graticulePath: path(GRATICULE as never) ?? '', pins };
   }, [coverage, markers, projection, rotation, zoom, width, height]);
 
-  // The sky drifts with the globe, slower than the ground (it is far away),
-  // wrapping at the edges so the field never empties. A full turn of the
-  // globe moves the stars about a third of the way across.
-  const stars = useMemo(() => {
-    const wrap = (v: number, size: number) => ((v % size) + size) % size;
-    const driftX = rotation[0] * ((width / 360) * STAR_PARALLAX);
-    const driftY = -rotation[1] * ((height / 180) * STAR_PARALLAX);
-    return STARS.map((st) => ({
-      x: wrap(st.x * width + driftX, width),
-      y: wrap(st.y * height + driftY, height),
-      r: st.r,
-      o: st.o,
-    })).filter((st) => !terrain || Math.hypot(st.x - cx, st.y - cy) > scale + 2);
-  }, [rotation, width, height, terrain, cx, cy, scale]);
-
   return (
     <View ref={container} {...(panHandlers ?? {})} style={{ width, height }}>
       {/* Satellite imagery on the GPU; the SVG above it leaves the disc clear. */}
@@ -704,10 +671,6 @@ export default function Globe({
         </Defs>
 
         <G clipPath="url(#viewport)">
-          {stars.map((st, i) => (
-            <Circle key={`s${i}`} cx={st.x} cy={st.y} r={st.r} fill="#FFFFFF" opacity={st.o} />
-          ))}
-
           {/* Halo, sphere, then a crisp limb so the edge reads as a horizon. */}
           <Circle cx={cx} cy={cy} r={scale * 1.05} fill="url(#atmosphere)" />
           {!terrain && <Circle cx={cx} cy={cy} r={scale} fill="url(#ocean)" />}
