@@ -25,7 +25,7 @@ import countries110m from 'world-atlas/countries-110m.json';
 
 import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 
-const LAND = topojson.feature(
+export const LAND = topojson.feature(
   countries110m as never,
   (countries110m as never as { objects: { countries: never } }).objects.countries
 ) as unknown as GeoJSON.FeatureCollection;
