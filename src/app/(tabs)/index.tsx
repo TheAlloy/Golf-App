@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, SectionList, useWindowDimensions, View } from 'react-native';
+import { Pressable, SectionList, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
 import type { ImageryStatus } from '@/components/terrain-layer';
 import { AppearanceButton, MapAppearance } from '@/components/appearance-button';
+import { CoveragePicker } from '@/components/coverage-picker';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
 import { colors, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
-import { COVERAGE_LEVELS, CoverageLevel, coverageNote, coverageShapes } from '@/lib/coverage';
+import { CoverageLevel, coverageNote, coverageShapes } from '@/lib/coverage';
 import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
@@ -283,38 +284,8 @@ export default function HomeScreen() {
 
         {/* Shade where you've played, from city up to continent */}
         {showCoverage && (
-          <View className="gap-1">
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerClassName="flex-row items-center gap-1.5"
-            >
-              <Text className="mr-1 text-[11px] text-muted-foreground">Played</Text>
-              {COVERAGE_LEVELS.map((l) => {
-                const active = coverageLevel === l.id;
-                return (
-                  <Pressable
-                    key={l.id}
-                    className={cn(
-                      'rounded-full border px-3 py-1',
-                      active ? 'border-primary bg-primary' : 'border-border bg-card/90'
-                    )}
-                    onPress={() => setCoverageLevel(l.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                  >
-                    <Text
-                      className={cn(
-                        'font-medium text-[11px]',
-                        active ? 'text-primary-foreground' : 'text-muted-foreground'
-                      )}
-                    >
-                      {l.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+          <View className="flex-row items-center gap-2">
+            <CoveragePicker value={coverageLevel} onChange={setCoverageLevel} />
             {coverageNote(coverageLevel) && (
               <Text className="text-[10px] text-muted-foreground">
                 {coverageNote(coverageLevel)}

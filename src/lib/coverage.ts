@@ -10,17 +10,16 @@ import { Continent, Course } from '@/models/types';
  * have played into areas to colour on the globe.
  *
  * Boundary data is bundled where it exists in a sensible size: countries for
- * the whole world (Natural Earth, via world-atlas), states and counties for
- * the US (Census Bureau, via us-atlas). Elsewhere a region or county becomes
- * a soft disc around the course, sized to roughly match.
+ * the whole world (Natural Earth, via world-atlas) and states for the US
+ * (Census Bureau, via us-atlas). Cities have no usable outlines, so a city is
+ * a soft disc around the course.
  */
-export type CoverageLevel = 'off' | 'cities' | 'counties' | 'regions' | 'countries' | 'continents';
+export type CoverageLevel = 'off' | 'cities' | 'states' | 'countries' | 'continents';
 
 export const COVERAGE_LEVELS: { id: CoverageLevel; label: string }[] = [
   { id: 'off', label: 'Off' },
   { id: 'cities', label: 'Cities' },
-  { id: 'counties', label: 'Counties' },
-  { id: 'regions', label: 'Regions' },
+  { id: 'states', label: 'US states' },
   { id: 'countries', label: 'Countries' },
   { id: 'continents', label: 'Continents' },
 ];
@@ -35,14 +34,11 @@ const COUNTRIES = topojson.feature(
 
 const CONTINENT_BY_ID = countryContinents as Record<string, Continent>;
 
-/** Disc radii in degrees of arc (1° ≈ 111 km). */
+/** City disc radius in degrees of arc (1° ≈ 111 km). */
 const CITY_RADIUS = 0.12;
-const COUNTY_RADIUS = 0.35;
-const REGION_RADIUS = 1.1;
 
-// US boundary sets are parsed on first use; counties alone are 3,000 shapes.
+// US states are parsed on first use.
 let statesCache: GeoJSON.FeatureCollection | null = null;
-let countiesCache: GeoJSON.FeatureCollection | null = null;
 function usStates(): GeoJSON.FeatureCollection {
   if (!statesCache) {
     const topo = require('us-atlas/states-10m.json');
@@ -52,16 +48,6 @@ function usStates(): GeoJSON.FeatureCollection {
     ) as unknown as GeoJSON.FeatureCollection;
   }
   return statesCache;
-}
-function usCounties(): GeoJSON.FeatureCollection {
-  if (!countiesCache) {
-    const topo = require('us-atlas/counties-10m.json');
-    countiesCache = topojson.feature(
-      topo,
-      topo.objects.counties
-    ) as unknown as GeoJSON.FeatureCollection;
-  }
-  return countiesCache;
 }
 
 const boundsCache = new WeakMap<Feature, Bounds>();
@@ -88,7 +74,6 @@ function featureAt(collection: GeoJSON.FeatureCollection, point: [number, number
 
 const containingCountry = new Map<string, Feature | null>();
 const containingState = new Map<string, Feature | null>();
-const containingCounty = new Map<string, Feature | null>();
 
 function lookup(
   cache: Map<string, Feature | null>,
@@ -140,15 +125,8 @@ export function coverageShapes(level: CoverageLevel, courses: Course[]): Feature
     case 'countries':
       for (const c of courses) add(lookup(containingCountry, () => COUNTRIES, c));
       return out;
-    case 'regions':
-      for (const c of courses) {
-        add(isUS(c) ? lookup(containingState, usStates, c) : disc(c, REGION_RADIUS));
-      }
-      return out;
-    case 'counties':
-      for (const c of courses) {
-        add(isUS(c) ? lookup(containingCounty, usCounties, c) : disc(c, COUNTY_RADIUS));
-      }
+    case 'states':
+      for (const c of courses) if (isUS(c)) add(lookup(containingState, usStates, c));
       return out;
     case 'cities':
       for (const c of courses) add(disc(c, CITY_RADIUS));
@@ -156,10 +134,9 @@ export function coverageShapes(level: CoverageLevel, courses: Course[]): Feature
   }
 }
 
-/** Whether a level is drawn from real boundaries everywhere, or discs outside the US. */
+/** A caveat worth showing next to the picker for some levels. */
 export function coverageNote(level: CoverageLevel): string | null {
-  if (level === 'counties' || level === 'regions')
-    return 'Outside the US, an area around each course';
   if (level === 'cities') return 'An area around each course';
+  if (level === 'states') return 'US courses only';
   return null;
 }
