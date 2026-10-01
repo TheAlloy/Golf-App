@@ -95,7 +95,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
           accessibilityLabel="Log a round"
           hitSlop={4}
         >
-          <Ionicons name="add-circle-outline" size={25} color={NAV_COLORS.icon} />
+          <Ionicons name="search-outline" size={25} color={NAV_COLORS.icon} />
         </Pressable>
         {renderTab(2)}
         {renderTab(3)}
