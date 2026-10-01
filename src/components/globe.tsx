@@ -147,7 +147,12 @@ export type GlobeMarker = {
 /** From this zoom the pins become flags with a name-and-status callout. */
 export const FLAG_ZOOM = 5;
 /** How quickly zoom eases toward its target; lower is snappier. */
-const ZOOM_EASE_MS = 90;
+const ZOOM_EASE_MS = 160;
+
+/** How quickly a flung globe slows: velocity halves roughly every 150 ms. */
+const INERTIA_TAU_MS = 220;
+/** Below this (degrees per ms) a coasting globe is considered stopped. */
+const INERTIA_STOP = 0.004;
 
 type Props = {
   width: number;
@@ -198,6 +203,12 @@ export default function Globe({
   // coordinates) can be turned into canvas coordinates.
   const offsetRef = useRef({ x: 0, y: 0 });
   const moved = useRef(0);
+  // Pointer moves can arrive several times a frame; one render per frame is plenty.
+  const rotationFrame = useRef(0);
+  const pendingRotation = useRef<[number, number] | null>(null);
+  // Recent drag positions, for the fling velocity on release.
+  const dragSamples = useRef<{ t: number; l: number; p: number }[]>([]);
+  const inertiaFrame = useRef(0);
   const spanRef = useRef(Math.min(width, height));
   const zoomRef = useRef(zoom);
   const onZoomRef = useRef(onZoomChange);
@@ -323,12 +334,63 @@ export default function Globe({
   const zoomFrame = useRef(0);
   const reduceMotionRef = useRef(false);
 
+  /** Set the rotation, rendering at most once per animation frame. */
+  const commitRotation = useCallback((rot: [number, number]) => {
+    rotationRef.current = rot;
+    pendingRotation.current = rot;
+    if (rotationFrame.current) return;
+    rotationFrame.current = requestAnimationFrame(() => {
+      rotationFrame.current = 0;
+      if (pendingRotation.current) setRotation(pendingRotation.current);
+    });
+  }, []);
+
+  const stopInertia = useCallback(() => {
+    if (inertiaFrame.current) cancelAnimationFrame(inertiaFrame.current);
+    inertiaFrame.current = 0;
+  }, []);
+
+  /** Let a released drag coast to a stop. */
+  const fling = useCallback(
+    (vl: number, vp: number) => {
+      if (reduceMotionRef.current) return;
+      let last = 0;
+      const step = (now: number) => {
+        // Real elapsed time (capped for a stalled tab), so the coast lasts the
+        // same wall-clock time whatever the frame rate.
+        const dt = last ? Math.min(now - last, 100) : 16;
+        last = now;
+        const [l, p] = rotationRef.current;
+        commitRotation([l + vl * dt, Math.max(-85, Math.min(85, p + vp * dt))]);
+        const decay = Math.exp(-dt / INERTIA_TAU_MS);
+        vl *= decay;
+        vp *= decay;
+        if (Math.hypot(vl, vp) < INERTIA_STOP) {
+          inertiaFrame.current = 0;
+          return;
+        }
+        inertiaFrame.current = requestAnimationFrame(step);
+      };
+      inertiaFrame.current = requestAnimationFrame(step);
+    },
+    [commitRotation]
+  );
+
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(rotationFrame.current);
+      cancelAnimationFrame(inertiaFrame.current);
+    },
+    []
+  );
+
   const zoomAt = useCallback(
     (next: number, fx: number, fy: number) => {
       const target = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
       zoomFocus.current = { x: fx, y: fy };
       // Measure what is under the fingers once per event, not every frame.
       zoomAnchor.current = geoUnder(fx, fy);
+      stopInertia();
       if (reduceMotionRef.current) {
         zoomTarget.current = null;
         applyZoom(target, fx, fy, zoomAnchor.current);
@@ -363,10 +425,19 @@ export default function Globe({
       };
       zoomFrame.current = requestAnimationFrame(step);
     },
-    [applyZoom, geoUnder]
+    [applyZoom, geoUnder, stopInertia]
   );
 
   useEffect(() => () => cancelAnimationFrame(zoomFrame.current), []);
+
+  const commitRotationRef = useRef(commitRotation);
+  const stopInertiaRef = useRef(stopInertia);
+  const flingRef = useRef(fling);
+  useEffect(() => {
+    commitRotationRef.current = commitRotation;
+    stopInertiaRef.current = stopInertia;
+    flingRef.current = fling;
+  }, [commitRotation, stopInertia, fling]);
 
   const zoomAtRef = useRef(zoomAt);
   useEffect(() => {
@@ -381,6 +452,8 @@ export default function Globe({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
         userDriving.current = true;
+        stopInertiaRef.current();
+        dragSamples.current = [];
         gestureStart.current = rotationRef.current;
         pinchStart.current = null;
         pinched.current = e.nativeEvent.touches.length > 1;
@@ -430,14 +503,30 @@ export default function Globe({
         const speed = 180 / zoomRef.current;
         const lambda = l0 + (dx / spanRef.current) * speed;
         const phi = Math.max(-85, Math.min(85, p0 - (dy / spanRef.current) * speed));
-        rotationRef.current = [lambda, phi];
-        setRotation([lambda, phi]);
+        commitRotationRef.current([lambda, phi]);
+        const now = Date.now();
+        const samples = dragSamples.current;
+        samples.push({ t: now, l: lambda, p: phi });
+        while (samples.length > 6 || (samples.length > 2 && now - samples[0].t > 120)) {
+          samples.shift();
+        }
       },
       onPanResponderRelease: (e) => {
         // A press that barely moved is a tap, not a drag.
         if (moved.current < 6 && !pinched.current) tapRef.current?.(e);
+        else if (!pinched.current) {
+          // Fling: carry on at the speed of the last few moves, then coast.
+          const samples = dragSamples.current;
+          const first = samples[0];
+          const lastSample = samples[samples.length - 1];
+          const dt = first && lastSample ? lastSample.t - first.t : 0;
+          if (first && lastSample && dt >= 16 && Date.now() - lastSample.t < 80) {
+            flingRef.current((lastSample.l - first.l) / dt, (lastSample.p - first.p) / dt);
+          }
+        }
         pinchStart.current = null;
         pinched.current = false;
+        dragSamples.current = [];
       },
     });
     setPanHandlers(responder.panHandlers as unknown as Record<string, unknown>);
