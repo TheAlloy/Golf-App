@@ -7,8 +7,13 @@ import { NAV_COLORS } from '@/constants/theme';
 
 /** Height of the floating pill. */
 export const TAB_BAR_HEIGHT = 64;
-/** Diameter of the darker disc that marks the selected tab. */
-const ACTIVE_DISC = 48;
+/**
+ * Inset of the selected-tab pill from the bar's edges, on every side: the bar's
+ * horizontal padding matches it, so the pill sits as far from the ends of the
+ * bar as from its top and bottom.
+ */
+const PILL_INSET = 8;
+const ACTIVE_HEIGHT = TAB_BAR_HEIGHT - PILL_INSET * 2;
 
 /** Gap between the pill and the bottom of the screen. */
 function barOffset(bottomInset: number): number {
@@ -61,10 +66,10 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
         hitSlop={4}
       >
         <View
-          className="items-center justify-center rounded-full"
+          className="items-center justify-center self-stretch"
           style={{
-            width: ACTIVE_DISC,
-            height: ACTIVE_DISC,
+            height: ACTIVE_HEIGHT,
+            borderRadius: ACTIVE_HEIGHT / 2,
             backgroundColor: focused ? NAV_COLORS.active : 'transparent',
           }}
         >
@@ -85,9 +90,10 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
       style={{ bottom: barOffset(insets.bottom) }}
     >
       <View
-        className="flex-row items-center rounded-full px-2"
+        className="flex-row items-center rounded-full"
         style={{
           height: TAB_BAR_HEIGHT,
+          paddingHorizontal: PILL_INSET,
           backgroundColor: NAV_COLORS.pill,
           borderWidth: 1,
           borderColor: NAV_COLORS.pillEdge,
