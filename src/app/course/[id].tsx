@@ -20,7 +20,11 @@ export default function CourseDetailScreen() {
   const allRounds = useAppStore((s) => s.rounds);
   const wishlist = useAppStore((s) => s.wishlist);
   const wish = useMemo(
-    () => wishlistProgress(wishlist.filter((w) => w.courseId === id), allRounds)[0],
+    () =>
+      wishlistProgress(
+        wishlist.filter((w) => w.courseId === id),
+        allRounds
+      )[0],
     [allRounds, id, wishlist]
   );
 
@@ -50,8 +54,8 @@ export default function CourseDetailScreen() {
             </Text>
           </View>
           {wish?.completedRound ? (
-            <View className="mt-1 rounded-full bg-primary/20 px-3 py-1.5">
-              <Text className="font-semibold text-xs text-primary">Wishlist ✓</Text>
+            <View className="mt-1 rounded-full bg-primary-bright/20 px-3 py-1.5">
+              <Text className="font-semibold text-xs text-primary-bright">Wishlist ✓</Text>
             </View>
           ) : (
             <WishlistButton courseId={course.id} className="mt-1 h-11 w-11" />
@@ -74,8 +78,8 @@ export default function CourseDetailScreen() {
             </Text>
             {wish && !wish.completedRound && (
               <Text className="mt-1 font-bold text-sm text-primary-foreground">
-                On your wishlist: your next round here earns{' '}
-                {wishReward(course, rounds.length > 0)} pts, dream bonus included.
+                On your wishlist: your next round here earns {wishReward(course, rounds.length > 0)}{' '}
+                pts, dream bonus included.
               </Text>
             )}
             {!wish && (

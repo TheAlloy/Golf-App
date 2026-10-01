@@ -11,6 +11,7 @@ export type ThemeColors = {
   card: string;
   cardElevated: string;
   primary: string;
+  primaryBright: string;
   primaryForeground: string;
   muted: string;
   mutedForeground: string;
@@ -21,20 +22,20 @@ export type ThemeColors = {
 };
 
 export const colors: ThemeColors = {
-    background: 'hsl(0, 0%, 3%)',
-    foreground: 'hsl(0, 0%, 98%)',
-    card: 'hsl(0, 0%, 7%)',
-    cardElevated: 'hsl(0, 0%, 10.5%)',
-    primary: 'hsl(82, 78%, 55%)',
-    primaryForeground: 'hsl(0, 0%, 5%)',
-    muted: 'hsl(0, 0%, 13%)',
-    mutedForeground: 'hsl(0, 0%, 60%)',
-    border: 'hsl(0, 0%, 16%)',
-    destructive: 'hsl(0, 84%, 60%)',
-    info: 'hsl(199, 89%, 58%)',
-    warm: 'hsl(33, 96%, 58%)',
+  background: 'hsl(0, 0%, 3%)',
+  foreground: 'hsl(0, 0%, 98%)',
+  card: 'hsl(0, 0%, 7%)',
+  cardElevated: 'hsl(0, 0%, 10.5%)',
+  primary: '#06402b',
+  primaryForeground: 'hsl(0, 0%, 98%)',
+  primaryBright: 'hsl(158, 55%, 46%)',
+  muted: 'hsl(0, 0%, 13%)',
+  mutedForeground: 'hsl(0, 0%, 60%)',
+  border: 'hsl(0, 0%, 16%)',
+  destructive: 'hsl(0, 84%, 60%)',
+  info: 'hsl(199, 89%, 58%)',
+  warm: 'hsl(33, 96%, 58%)',
 };
-
 
 /**
  * Kept as a hook so call sites stay unchanged if a second theme is ever
@@ -61,7 +62,7 @@ export const GLOBE_COLORS = {
   graticule: 'hsl(0, 0%, 12%)',
   atmosphere: 'hsl(0, 0%, 82%)',
   limb: 'hsl(0, 0%, 72%)',
-  pin: 'hsl(82, 78%, 58%)',
+  pin: 'hsl(158, 83%, 30%)',
   wishlist: 'hsl(330, 90%, 68%)',
   pinLabel: 'hsl(0, 0%, 90%)',
   callout: 'hsla(0, 0%, 6%, 0.92)',

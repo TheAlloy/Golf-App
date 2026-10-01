@@ -114,9 +114,7 @@ export default function HomeScreen() {
   // Face the globe at the middle of everywhere you have played, or of your
   // wishlist when nothing is played yet.
   const initialCentre = useMemo<[number, number] | null>(() => {
-    const focus = playedCourses.length
-      ? playedCourses.map((pc) => pc.course)
-      : wishedCourses;
+    const focus = playedCourses.length ? playedCourses.map((pc) => pc.course) : wishedCourses;
     if (focus.length === 0) return null;
     const lng = focus.reduce((sum, c) => sum + c.coordinate.longitude, 0) / focus.length;
     const lat = focus.reduce((sum, c) => sum + c.coordinate.latitude, 0) / focus.length;
@@ -300,8 +298,8 @@ function PlayedCourseRow({ item, onPress }: { item: PlayedCourse; onPress: () =>
       className="flex-row items-center gap-3 rounded-xl bg-card p-3 active:opacity-80"
       onPress={onPress}
     >
-      <View className="h-11 w-11 items-center justify-center rounded-lg bg-primary/20">
-        <Ionicons name="flag" size={18} color={colors.primary} />
+      <View className="h-11 w-11 items-center justify-center rounded-lg bg-primary-bright/20">
+        <Ionicons name="flag" size={18} color={colors.primaryBright} />
       </View>
       <View className="flex-1">
         <Text className="font-semibold text-sm text-foreground" numberOfLines={1}>

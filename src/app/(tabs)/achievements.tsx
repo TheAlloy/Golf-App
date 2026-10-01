@@ -31,9 +31,7 @@ export default function AchievementsScreen() {
     [courses, rounds, wishlist]
   );
   const earned = achievements.filter((a) => a.earned);
-  const closest = achievements
-    .filter((a) => !a.earned)
-    .sort((a, b) => b.progress - a.progress)[0];
+  const closest = achievements.filter((a) => !a.earned).sort((a, b) => b.progress - a.progress)[0];
 
   // Open quests: wishlisted courses not yet ticked off, biggest reward first.
   const quests = useMemo(
@@ -52,7 +50,8 @@ export default function AchievementsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView indicatorStyle="white"
+      <ScrollView
+        indicatorStyle="white"
         contentContainerClassName="gap-4 px-4"
         contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: tabSpace + 24 }}
       >
@@ -68,7 +67,7 @@ export default function AchievementsScreen() {
           <View className="flex-row items-center gap-4">
             <View
               className="h-20 w-20 items-center justify-center rounded-full border-4"
-              style={{ borderColor: colors.primary }}
+              style={{ borderColor: colors.primaryBright }}
             >
               <Text className="text-[10px] text-muted-foreground">LEVEL</Text>
               <Text className="font-bold text-3xl text-foreground">{level.number}</Text>
@@ -119,7 +118,7 @@ export default function AchievementsScreen() {
         <View className="rounded-2xl bg-card p-4">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-1.5">
-              <Ionicons name="map" size={16} color={colors.primary} />
+              <Ionicons name="map" size={16} color={colors.primaryBright} />
               <Text className="font-semibold text-base">Wishlist quests</Text>
             </View>
             <Text className="text-xs text-muted-foreground">
@@ -140,7 +139,7 @@ export default function AchievementsScreen() {
               </Button>
             </View>
           ) : quests.length === 0 ? (
-            <Text className="mt-3 text-sm text-primary">
+            <Text className="mt-3 text-sm text-primary-bright">
               Every wishlist course played. Time to dream bigger.
             </Text>
           ) : (
@@ -149,7 +148,9 @@ export default function AchievementsScreen() {
                 <Pressable
                   key={course.id}
                   className="flex-row items-center gap-3 rounded-xl bg-elevated p-3 active:opacity-80"
-                  onPress={() => router.push({ pathname: '/course/[id]', params: { id: course.id } })}
+                  onPress={() =>
+                    router.push({ pathname: '/course/[id]', params: { id: course.id } })
+                  }
                 >
                   <View className="flex-1">
                     <Text className="font-semibold text-sm" numberOfLines={1}>
@@ -180,14 +181,14 @@ export default function AchievementsScreen() {
         {/* Closest badge, to give a next goal */}
         {closest && (
           <View className="flex-row items-center gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-4">
-            <Ionicons name="flag" size={18} color={colors.primary} />
+            <Ionicons name="flag" size={18} color={colors.primaryBright} />
             <View className="flex-1">
               <Text className="font-semibold text-sm">Next up: {closest.name}</Text>
               <Text className="text-xs text-muted-foreground">
                 {closest.description} · {closest.detail}
               </Text>
             </View>
-            <Text className="font-bold text-sm text-primary">+{closest.points}</Text>
+            <Text className="font-bold text-sm text-primary-bright">+{closest.points}</Text>
           </View>
         )}
 

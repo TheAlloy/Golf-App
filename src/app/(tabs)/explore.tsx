@@ -62,7 +62,11 @@ export default function ExploreScreen() {
           autoCorrect={false}
         />
         {query !== '' && (
-          <Pressable className="px-3" onPress={() => setQuery('')} accessibilityLabel="Clear search">
+          <Pressable
+            className="px-3"
+            onPress={() => setQuery('')}
+            accessibilityLabel="Clear search"
+          >
             <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
           </Pressable>
         )}
@@ -143,7 +147,8 @@ export default function ExploreScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <FlatList indicatorStyle="white"
+      <FlatList
+        indicatorStyle="white"
         data={results}
         keyExtractor={(c) => c.id}
         ListHeaderComponent={header}
@@ -186,7 +191,7 @@ function WishCard({
     <Pressable
       className={cn(
         'w-40 justify-between rounded-xl p-3 active:opacity-80',
-        done ? 'bg-primary/15' : 'bg-card'
+        done ? 'bg-primary-bright/15' : 'bg-card'
       )}
       style={{ minHeight: 112 }}
       onPress={onPress}
@@ -201,8 +206,8 @@ function WishCard({
       </View>
       {done ? (
         <View className="flex-row items-center gap-1">
-          <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-          <Text className="font-semibold text-xs text-primary">Ticked off</Text>
+          <Ionicons name="checkmark-circle" size={14} color={colors.primaryBright} />
+          <Text className="font-semibold text-xs text-primary-bright">Ticked off</Text>
         </View>
       ) : (
         <View className="flex-row items-center gap-1">

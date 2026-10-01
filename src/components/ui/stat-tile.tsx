@@ -25,7 +25,7 @@ export function StatTile({ label, value, delta, deltaTone = 'muted', icon, class
         <Text
           className={cn(
             'text-xs',
-            deltaTone === 'primary' && 'text-primary',
+            deltaTone === 'primary' && 'text-primary-bright',
             deltaTone === 'info' && 'text-info',
             deltaTone === 'muted' && 'text-muted-foreground'
           )}

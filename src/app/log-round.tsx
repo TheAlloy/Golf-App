@@ -101,12 +101,16 @@ export default function LogRoundScreen() {
       toPar: par !== undefined ? gross - par : undefined,
       occasion: occasion.trim() || undefined,
       notes: notes.trim() || undefined,
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags: tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
       playedWith,
       photos,
-      holeScores: mode === 'holes' && holeScores.some((h) => h?.strokes !== undefined)
-        ? holeScores
-        : undefined,
+      holeScores:
+        mode === 'holes' && holeScores.some((h) => h?.strokes !== undefined)
+          ? holeScores
+          : undefined,
     });
     router.back();
   };
@@ -122,7 +126,8 @@ export default function LogRoundScreen() {
       <ScrollView
         indicatorStyle="white"
         contentContainerClassName="gap-2 p-4 pb-16"
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="handled"
+      >
         <Text className="font-semibold text-sm">Course</Text>
         {selectedCourse ? (
           <Pressable
@@ -142,7 +147,11 @@ export default function LogRoundScreen() {
           </Pressable>
         ) : (
           <>
-            <Input placeholder="Search courses…" value={courseQuery} onChangeText={setCourseQuery} />
+            <Input
+              placeholder="Search courses…"
+              value={courseQuery}
+              onChangeText={setCourseQuery}
+            />
             {courseMatches.map((c) => (
               <Pressable key={c.id} className="px-1 py-2" onPress={() => setCourseId(c.id)}>
                 <Text>{c.name}</Text>
@@ -160,7 +169,11 @@ export default function LogRoundScreen() {
         <Text className="mt-2 font-semibold text-sm">Holes</Text>
         <View className="flex-row flex-wrap items-center gap-2">
           {([9, 18] as const).map((h) => (
-            <Pressable key={h} className={chip(holesPlayed === h)} onPress={() => setHolesPlayed(h)}>
+            <Pressable
+              key={h}
+              className={chip(holesPlayed === h)}
+              onPress={() => setHolesPlayed(h)}
+            >
               <Text
                 className={cn(
                   'text-sm',
@@ -226,7 +239,7 @@ export default function LogRoundScreen() {
                 {cardTotal !== undefined ? 'Card total' : 'Tap through the holes below'}
               </Text>
               {cardTotal !== undefined && (
-                <Text className="font-bold text-lg text-primary">{cardTotal}</Text>
+                <Text className="font-bold text-lg text-primary-bright">{cardTotal}</Text>
               )}
             </View>
             {!selectedCourse?.holePars && (

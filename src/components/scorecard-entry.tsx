@@ -41,7 +41,8 @@ export default function ScorecardEntry({ holes, pars, value, onChange }: Props) 
         const hole = value[i] ?? {};
         const isPar3 = par === 3;
         const gir = girForHole(hole, par);
-        const over = hole.strokes !== undefined && par !== undefined ? hole.strokes - par : undefined;
+        const over =
+          hole.strokes !== undefined && par !== undefined ? hole.strokes - par : undefined;
 
         return (
           <View key={i} className="rounded-lg bg-elevated p-3">
@@ -52,15 +53,15 @@ export default function ScorecardEntry({ holes, pars, value, onChange }: Props) 
               </View>
               <View className="flex-row items-center gap-2">
                 {gir && (
-                  <View className="rounded-full bg-primary/20 px-2 py-0.5">
-                    <Text className="text-[10px] text-primary">GIR</Text>
+                  <View className="rounded-full bg-primary-bright/20 px-2 py-0.5">
+                    <Text className="text-[10px] text-primary-bright">GIR</Text>
                   </View>
                 )}
                 {over !== undefined && (
                   <Text
                     className={cn(
                       'font-semibold text-xs',
-                      over < 0 && 'text-primary',
+                      over < 0 && 'text-primary-bright',
                       over === 0 && 'text-muted-foreground',
                       over > 0 && 'text-info'
                     )}
@@ -139,7 +140,10 @@ function Stepper({
         <Text className="min-w-6 text-center font-bold text-base text-foreground">
           {value ?? '–'}
         </Text>
-        <Pressable className="h-8 w-8 items-center justify-center rounded-full bg-card" onPress={onUp}>
+        <Pressable
+          className="h-8 w-8 items-center justify-center rounded-full bg-card"
+          onPress={onUp}
+        >
           <Ionicons name="add" size={16} color={colors.foreground} />
         </Pressable>
       </View>
@@ -147,7 +151,15 @@ function Stepper({
   );
 }
 
-function Toggle({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function Toggle({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       className={cn(

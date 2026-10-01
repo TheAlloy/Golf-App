@@ -13,7 +13,7 @@ export function ScoreBadge({ toPar, className }: { toPar?: number; className?: s
     toPar === undefined
       ? 'text-muted-foreground'
       : toPar < 0
-        ? 'text-primary'
+        ? 'text-primary-bright'
         : toPar === 0
           ? 'text-info'
           : 'text-info';

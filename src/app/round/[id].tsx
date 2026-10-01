@@ -51,7 +51,10 @@ export default function RoundDetailScreen() {
         {/* Summary card */}
         <View className="flex-row items-center gap-3 rounded-xl bg-card p-4">
           {round.photos[0] ? (
-            <Image source={{ uri: round.photos[0] }} style={{ width: 72, height: 72, borderRadius: 12 }} />
+            <Image
+              source={{ uri: round.photos[0] }}
+              style={{ width: 72, height: 72, borderRadius: 12 }}
+            />
           ) : (
             <View className="h-[72px] w-[72px] items-center justify-center rounded-xl bg-elevated">
               <Ionicons name="golf-outline" size={26} color={colors.mutedForeground} />
@@ -65,7 +68,7 @@ export default function RoundDetailScreen() {
             </Text>
           </View>
           <View className="items-end">
-            <Text className="font-bold text-3xl text-primary">{round.score ?? '—'}</Text>
+            <Text className="font-bold text-3xl text-primary-bright">{round.score ?? '—'}</Text>
             <ScoreBadge toPar={round.toPar} />
           </View>
         </View>
@@ -125,7 +128,11 @@ export default function RoundDetailScreen() {
           <StatTile
             label="Putts"
             value={stats.holesWithPutts ? String(stats.putts) : '—'}
-            delta={stats.holesWithPutts ? `${(stats.putts / stats.holesWithPutts).toFixed(2)} per hole` : undefined}
+            delta={
+              stats.holesWithPutts
+                ? `${(stats.putts / stats.holesWithPutts).toFixed(2)} per hole`
+                : undefined
+            }
           />
         </View>
 
@@ -148,7 +155,11 @@ export default function RoundDetailScreen() {
         {round.photos.length > 1 && (
           <View className="flex-row flex-wrap gap-2">
             {round.photos.slice(1).map((uri) => (
-              <Image key={uri} source={{ uri }} style={{ width: 80, height: 80, borderRadius: 10 }} />
+              <Image
+                key={uri}
+                source={{ uri }}
+                style={{ width: 80, height: 80, borderRadius: 10 }}
+              />
             ))}
           </View>
         )}
@@ -166,22 +177,24 @@ function ScorecardBlock({ holes, label }: { holes: HoleRow[]; label: string }) {
 
   return (
     <View className="overflow-hidden rounded-lg border border-border">
+      <Row cells={[...holes.map((h) => String(h.number)), label]} header label="HOLE" />
       <Row
-        cells={[...holes.map((h) => String(h.number)), label]}
-        header
-        label="HOLE"
+        cells={[
+          ...holes.map((h) => (h.par ? String(h.par) : '–')),
+          parTotal ? String(parTotal) : '–',
+        ]}
+        label="PAR"
       />
-      <Row cells={[...holes.map((h) => (h.par ? String(h.par) : '–')), parTotal ? String(parTotal) : '–']} label="PAR" />
       <Row
-        cells={[...holes.map((h) => (h.score ? String(h.score) : '–')), scoreTotal ? String(scoreTotal) : '–']}
+        cells={[
+          ...holes.map((h) => (h.score ? String(h.score) : '–')),
+          scoreTotal ? String(scoreTotal) : '–',
+        ]}
         label="SCORE"
         tone={holes.map((h) => (h.score && h.par ? h.score - h.par : undefined))}
       />
       <Row
-        cells={[
-          ...holes.map((h) => (h.score && h.par ? formatToPar(h.score - h.par) : '–')),
-          '',
-        ]}
+        cells={[...holes.map((h) => (h.score && h.par ? formatToPar(h.score - h.par) : '–')), '']}
         label="TO PAR"
         muted
       />
@@ -217,7 +230,7 @@ function Row({
                 header && 'font-semibold text-foreground',
                 muted && 'text-muted-foreground',
                 !header && !muted && 'text-foreground',
-                t !== undefined && t < 0 && 'font-bold text-primary'
+                t !== undefined && t < 0 && 'font-bold text-primary-bright'
               )}
             >
               {c}

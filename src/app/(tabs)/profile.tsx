@@ -43,9 +43,7 @@ export default function ProfileScreen() {
   }, [courses]);
   const stats = aggregateStats(rounds, parsByCourse);
 
-  const countries = new Set(
-    [...playedIds].map((id) => courses.get(id)?.country).filter(Boolean)
-  );
+  const countries = new Set([...playedIds].map((id) => courses.get(id)?.country).filter(Boolean));
   const scored = rounds.filter((r) => r.score !== undefined);
   const recent = [...rounds].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   const pct = (hit: number, chances: number) =>
@@ -58,7 +56,8 @@ export default function ProfileScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView indicatorStyle="white"
+      <ScrollView
+        indicatorStyle="white"
         contentContainerClassName="gap-4 px-4"
         contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: tabSpace + 24 }}
         keyboardShouldPersistTaps="handled"
@@ -89,7 +88,9 @@ export default function ProfileScreen() {
 
         {/* Handicap is derived from logged rounds, never typed in. */}
         <View className="items-center rounded-2xl bg-card p-6">
-          <Text className="font-bold text-6xl text-primary">{formatHandicap(handicap.index)}</Text>
+          <Text className="font-bold text-6xl text-primary-bright">
+            {formatHandicap(handicap.index)}
+          </Text>
           <Text className="font-semibold text-sm text-foreground">Handicap index</Text>
           <Text className="mt-1 text-center text-xs text-muted-foreground">
             {handicap.index === null
@@ -122,7 +123,7 @@ export default function ProfileScreen() {
               label="Fairways"
               value={pct(stats.fairwaysHit, stats.fairwayChances)}
               delta={`${stats.fairwaysHit} / ${stats.fairwayChances}`}
-              icon={<Ionicons name="golf-outline" size={14} color={colors.primary} />}
+              icon={<Ionicons name="golf-outline" size={14} color={colors.primaryBright} />}
             />
             <StatTile
               className="bg-elevated"
@@ -154,7 +155,7 @@ export default function ProfileScreen() {
             <Text className="font-semibold text-base">Recent rounds</Text>
             {rounds.length > 0 && (
               <Pressable onPress={() => router.push('/rounds')}>
-                <Text className="text-sm text-primary">All {rounds.length}</Text>
+                <Text className="text-sm text-primary-bright">All {rounds.length}</Text>
               </Pressable>
             )}
           </View>

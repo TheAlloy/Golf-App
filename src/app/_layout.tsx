@@ -39,7 +39,7 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },
           headerTitleStyle: { fontFamily: 'Manrope_600SemiBold', color: colors.foreground },
-          headerTintColor: colors.primary,
+          headerTintColor: colors.primaryBright,
           cardStyle: { backgroundColor: colors.background },
           // Every page change is a cross-fade. The JS stack is used because
           // it animates on the web too; the native one only does on devices.
@@ -51,14 +51,20 @@ export default function RootLayout() {
         <Stack.Screen name="rounds" options={{ title: 'Rounds' }} />
         <Stack.Screen name="friends" options={{ title: 'Friends' }} />
         <Stack.Screen name="coverage" options={{ title: 'Course coverage' }} />
-        <Stack.Screen name="log-round" options={{
+        <Stack.Screen
+          name="log-round"
+          options={{
             title: 'Log a round',
             headerLeft: () => <HeaderBack variant="close" />,
-          }} />
-        <Stack.Screen name="add-course" options={{
+          }}
+        />
+        <Stack.Screen
+          name="add-course"
+          options={{
             title: 'Add a course',
             headerLeft: () => <HeaderBack variant="close" />,
-          }} />
+          }}
+        />
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
         <Stack.Screen name="round/[id]" options={{ title: 'Round' }} />
       </Stack>

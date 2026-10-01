@@ -37,7 +37,7 @@ export default function CourseMap({ courses, playedCourseIds }: Props) {
           <Text
             className={
               playedCourseIds.has(course.id)
-                ? 'font-semibold text-sm text-primary'
+                ? 'font-semibold text-sm text-primary-bright'
                 : 'font-semibold text-sm text-muted-foreground'
             }
           >

@@ -24,19 +24,22 @@ export function CourseCard({ course, played, completed, className }: Props) {
 
   return (
     <Pressable
-      className={cn('flex-row items-center gap-3 rounded-xl bg-card p-3 active:opacity-80', className)}
+      className={cn(
+        'flex-row items-center gap-3 rounded-xl bg-card p-3 active:opacity-80',
+        className
+      )}
       onPress={() => router.push({ pathname: '/course/[id]', params: { id: course.id } })}
     >
       <View
         className={cn(
           'h-11 w-11 items-center justify-center rounded-lg',
-          played ? 'bg-primary/20' : 'bg-elevated'
+          played ? 'bg-primary-bright/20' : 'bg-elevated'
         )}
       >
         <Ionicons
           name={played ? 'flag' : 'flag-outline'}
           size={18}
-          color={played ? colors.primary : colors.mutedForeground}
+          color={played ? colors.primaryBright : colors.mutedForeground}
         />
       </View>
       <View className="flex-1">
@@ -55,9 +58,9 @@ export function CourseCard({ course, played, completed, className }: Props) {
         </View>
       </View>
       {completed ? (
-        <View className="flex-row items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1">
-          <Ionicons name="checkmark" size={12} color={colors.primary} />
-          <Text className="font-semibold text-[11px] text-primary">Ticked off</Text>
+        <View className="flex-row items-center gap-1 rounded-full bg-primary-bright/20 px-2.5 py-1">
+          <Ionicons name="checkmark" size={12} color={colors.primaryBright} />
+          <Text className="font-semibold text-[11px] text-primary-bright">Ticked off</Text>
         </View>
       ) : (
         <WishlistButton courseId={course.id} />

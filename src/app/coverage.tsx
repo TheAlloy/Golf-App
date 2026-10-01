@@ -24,7 +24,7 @@ export default function CoverageScreen() {
       <Stack.Screen options={{ title: 'Course coverage' }} />
       <ScrollView indicatorStyle="white" contentContainerClassName="gap-4 p-4">
         <View className="rounded-xl bg-card p-4">
-          <Text className="font-bold text-3xl text-primary">
+          <Text className="font-bold text-3xl text-primary-bright">
             {CATALOGUE_COUNT.toLocaleString()}
           </Text>
           <Text className="text-sm text-muted-foreground">courses in the app right now</Text>
@@ -43,7 +43,7 @@ export default function CoverageScreen() {
                 </View>
                 <View className="h-1.5 overflow-hidden rounded-full bg-elevated">
                   <View
-                    className="h-full rounded-full bg-primary"
+                    className="h-full rounded-full bg-primary-bright"
                     style={{ width: `${Math.max(1, (count / max) * 100)}%` }}
                   />
                 </View>
@@ -58,12 +58,14 @@ export default function CoverageScreen() {
             <Text className="font-semibold">Why the gaps?</Text>
           </View>
           <Text className="mt-2 text-sm text-muted-foreground">
-            US courses come from the OpenGolfAPI open dataset, which is complete but
-            US-only. Everywhere else is currently a curated shortlist of {thin > 0 ? 'notable' : ''} courses.
+            US courses come from the OpenGolfAPI open dataset, which is complete but US-only.
+            Everywhere else is currently a curated shortlist of {thin > 0 ? 'notable' : ''} courses.
           </Text>
           <Text className="mt-2 text-sm text-muted-foreground">
             Full worldwide coverage comes from OpenStreetMap. Run{' '}
-            <Text className="text-sm text-primary">npm run catalogue:import -- --region=europe</Text>{' '}
+            <Text className="text-sm text-primary-bright">
+              npm run catalogue:import -- --region=europe
+            </Text>{' '}
             in the repo to pull every mapped course in a region, then rebuild the app.
           </Text>
         </View>

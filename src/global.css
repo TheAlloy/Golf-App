@@ -12,7 +12,7 @@
  * are HSL triplets because React Native's parser has no oklch support.
  */
 :root {
-  /* Near-black ground with true neutral greys above it; lime is the only hue. */
+  /* Near-black ground with true neutral greys above it; green is the only hue. */
   --background: 0 0% 3%;
   --foreground: 0 0% 98%;
 
@@ -24,9 +24,11 @@
   --popover: 0 0% 7%;
   --popover-foreground: 0 0% 98%;
 
-  /* Lime: the signature accent, used for scores, actions and the brand mark. */
-  --primary: 82 78% 55%;
-  --primary-foreground: 0 0% 5%;
+  /* Deep green (#06402b): the signature accent, used for scores, actions and the brand mark. */
+  --primary: 158 83% 14%;
+  --primary-foreground: 0 0% 98%;
+  /* The same green lifted for text, icons and tints on the dark ground. */
+  --primary-bright: 158 55% 46%;
 
   --secondary: 0 0% 13%;
   --secondary-foreground: 0 0% 98%;
@@ -34,17 +36,17 @@
   --muted: 0 0% 13%;
   --muted-foreground: 0 0% 60%;
 
-  --accent: 82 78% 55%;
-  --accent-foreground: 0 0% 5%;
+  --accent: 158 83% 14%;
+  --accent-foreground: 0 0% 98%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
   --border: 0 0% 16%;
   --input: 0 0% 16%;
-  --ring: 82 78% 55%;
+  --ring: 158 83% 14%;
 
-  /* Supporting hues for stats and heat, kept off the lime accent. */
+  /* Supporting hues for stats and heat, kept off the green accent. */
   --info: 199 89% 58%;
   --warm: 33 96% 58%;
   --heat-low: 145 62% 36%;

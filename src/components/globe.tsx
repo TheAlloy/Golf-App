@@ -488,7 +488,7 @@ export default function Globe({
       })
       .filter((d): d is NonNullable<typeof d> => d !== null);
 
-    // Every course gets a dot at every zoom, lime for played and pink for
+    // Every course gets a dot at every zoom, green for played and pink for
     // wishlisted, so the two always read apart; names wait for zoom 3.
     const placed = markers
       .filter((m) => visible(m.longitude, m.latitude))
