@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, SectionList, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, SectionList, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
@@ -12,6 +12,7 @@ import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
 import { colors, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
+import { COVERAGE_LEVELS, CoverageLevel, coverageNote, coverageShapes } from '@/lib/coverage';
 import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
@@ -56,6 +57,9 @@ export default function HomeScreen() {
   const [appearance, setAppearance] = useState<MapAppearance>('map');
   const palette = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
   const [imagery, setImagery] = useState<ImageryStatus>('idle');
+  // "Where I've played" shading; only the dark map draws it.
+  const [coverageLevel, setCoverageLevel] = useState<CoverageLevel>('off');
+  const showCoverage = view === 'map' && appearance === 'map';
 
   const playedCourses = useMemo(
     () =>
@@ -72,6 +76,17 @@ export default function HomeScreen() {
         })
         .filter((c) => c !== null),
     [courses, playedIds, rounds]
+  );
+
+  const coverage = useMemo(
+    () =>
+      showCoverage
+        ? coverageShapes(
+            coverageLevel,
+            playedCourses.map((p) => p.course)
+          )
+        : [],
+    [coverageLevel, playedCourses, showCoverage]
   );
 
   // Wishlisted courses you haven't played yet, as their own lime-yellow markers.
@@ -154,6 +169,7 @@ export default function HomeScreen() {
           initialCentre={initialCentre}
           appearance={appearance}
           onImageryStatus={setImagery}
+          coverage={coverage}
         />
       </View>
 
@@ -264,6 +280,48 @@ export default function HomeScreen() {
             />
           )}
         </View>
+
+        {/* Shade where you've played, from city up to continent */}
+        {showCoverage && (
+          <View className="gap-1">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName="flex-row items-center gap-1.5"
+            >
+              <Text className="mr-1 text-[11px] text-muted-foreground">Played</Text>
+              {COVERAGE_LEVELS.map((l) => {
+                const active = coverageLevel === l.id;
+                return (
+                  <Pressable
+                    key={l.id}
+                    className={cn(
+                      'rounded-full border px-3 py-1',
+                      active ? 'border-primary bg-primary' : 'border-border bg-card/90'
+                    )}
+                    onPress={() => setCoverageLevel(l.id)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text
+                      className={cn(
+                        'font-medium text-[11px]',
+                        active ? 'text-primary-foreground' : 'text-muted-foreground'
+                      )}
+                    >
+                      {l.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            {coverageNote(coverageLevel) && (
+              <Text className="text-[10px] text-muted-foreground">
+                {coverageNote(coverageLevel)}
+              </Text>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Legend: what the two dot colours mean */}

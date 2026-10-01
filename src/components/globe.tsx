@@ -154,6 +154,8 @@ type Props = {
   height: number;
   /** Individual courses, revealed as you zoom in. */
   markers?: GlobeMarker[];
+  /** Areas to shade as played (countries, states, discs…), as GeoJSON features. */
+  coverage?: GeoJSON.Feature[];
   zoom?: number;
   onZoomChange?: (zoom: number) => void;
   onSelectMarker?: (id: string) => void;
@@ -169,6 +171,7 @@ export default function Globe({
   width,
   height,
   markers = [],
+  coverage = [],
   zoom = MIN_ZOOM,
   onZoomChange,
   onSelectMarker,
@@ -500,10 +503,14 @@ export default function Globe({
     };
   }, []);
 
-  const { landPaths, graticulePath, pins } = useMemo(() => {
+  const { landPaths, coveragePaths, graticulePath, pins } = useMemo(() => {
     const path = geoPath(projection);
     const centre: [number, number] = [-rotation[0], -rotation[1]];
     const visible = (lng: number, lat: number) => geoDistance([lng, lat], centre) < Math.PI / 2;
+
+    const coveragePaths = coverage
+      .map((f) => path(f as never))
+      .filter((d): d is string => Boolean(d));
 
     // Finer coastlines once zoomed in, and only the countries that can be on screen.
     const fine = zoom >= FINE_ZOOM;
@@ -549,8 +556,8 @@ export default function Globe({
       return { ...p, showLabel: clear, callout };
     });
 
-    return { landPaths, graticulePath: path(GRATICULE as never) ?? '', pins };
-  }, [markers, projection, rotation, zoom, width, height]);
+    return { landPaths, coveragePaths, graticulePath: path(GRATICULE as never) ?? '', pins };
+  }, [coverage, markers, projection, rotation, zoom, width, height]);
 
   return (
     <View ref={container} {...(panHandlers ?? {})} style={{ width, height }}>
@@ -631,6 +638,17 @@ export default function Globe({
               fill={terrain ? 'none' : pal.land}
               stroke={pal.landStroke}
               strokeWidth={terrain ? 0.4 : 0.5}
+            />
+          ))}
+
+          {/* Where you've played, shaded over the land at the chosen level. */}
+          {coveragePaths.map((d, i) => (
+            <Path
+              key={`cov${i}`}
+              d={d}
+              fill={GLOBE_COLORS.coverage}
+              stroke={GLOBE_COLORS.coverageEdge}
+              strokeWidth={0.7}
             />
           ))}
 

@@ -57,6 +57,9 @@ export const GLOBE_COLORS = {
   pin: 'hsl(158, 83%, 30%)',
   wishlist: 'hsl(68, 92%, 60%)',
   pinLabel: 'hsl(0, 0%, 90%)',
+  // "Where I've played" shading over land, with an edge so adjacent areas read apart.
+  coverage: 'hsla(158, 80%, 46%, 0.34)',
+  coverageEdge: 'hsla(158, 85%, 62%, 0.85)',
   callout: 'hsla(0, 0%, 6%, 0.92)',
   calloutEdge: 'hsla(0, 0%, 100%, 0.12)',
 };
