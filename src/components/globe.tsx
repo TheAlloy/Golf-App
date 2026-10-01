@@ -572,7 +572,6 @@ export default function Globe({
             if (p.callout) return <FlagPin key={p.id} cx={p.cx} cy={p.cy} color={color} />;
             return (
               <G key={p.id}>
-                <Circle cx={p.cx} cy={p.cy} r={3.6} fill={color} opacity={0.14} />
                 <Circle cx={p.cx} cy={p.cy} r={2.3} fill={color} />
                 {zoom >= 3 && p.showLabel && (
                   <SvgText
