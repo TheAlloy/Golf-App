@@ -5,23 +5,31 @@ import { Modal, Pressable, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { cn } from '@/lib/cn';
-import { COVERAGE_LEVELS, CoverageLevel } from '@/lib/coverage';
+import { COVERAGE_LEVELS, CoverageLevel, coverageNote } from '@/lib/coverage';
+
+/** Diameter of the round trigger; matches the map thumbnail beside the toggle. */
+const BUTTON_SIZE = 46;
 
 /**
- * Dropdown for the "where I've played" shading level. The menu opens in a
- * transparent modal anchored under the button, so it floats above the globe
- * and a tap anywhere else closes it.
+ * Round filter button for the "where I've played" shading level. The menu
+ * opens in a transparent modal anchored under the button, so it floats above
+ * the globe and a tap anywhere else closes it. The icon lights up while a
+ * level is on.
  */
 export function CoveragePicker({
   value,
   onChange,
+  size = BUTTON_SIZE,
 }: {
   value: CoverageLevel;
   onChange: (level: CoverageLevel) => void;
+  size?: number;
 }) {
   const button = useRef<View>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const current = COVERAGE_LEVELS.find((l) => l.id === value) ?? COVERAGE_LEVELS[0];
+  const active = value !== 'off';
+  const note = coverageNote(value);
 
   const open = () => {
     button.current?.measureInWindow((x, y, _w, h) => setAnchor({ x, y: y + h + 6 }));
@@ -31,16 +39,21 @@ export function CoveragePicker({
     <>
       <Pressable
         ref={button}
-        className="flex-row items-center gap-1.5 self-start rounded-full border border-border bg-card/90 py-1.5 pl-3 pr-2 active:opacity-80"
+        className={cn(
+          'items-center justify-center rounded-full border active:opacity-80',
+          active ? 'border-primary bg-primary' : 'border-border bg-card/90'
+        )}
+        style={{ width: size, height: size }}
         onPress={open}
         accessibilityRole="button"
         accessibilityLabel={`Shade where you've played: ${current.label}`}
         accessibilityState={{ expanded: anchor !== null }}
       >
-        <Ionicons name="color-fill-outline" size={13} color={colors.mutedForeground} />
-        <Text className="text-xs text-muted-foreground">Played</Text>
-        <Text className="font-semibold text-xs text-foreground">{current.label}</Text>
-        <Ionicons name="chevron-down" size={13} color={colors.mutedForeground} />
+        <Ionicons
+          name={active ? 'funnel' : 'funnel-outline'}
+          size={18}
+          color={active ? colors.primaryForeground : colors.mutedForeground}
+        />
       </Pressable>
 
       <Modal
@@ -60,34 +73,42 @@ export function CoveragePicker({
               }}
               accessibilityRole="menu"
             >
+              <Text className="px-3 pb-1 pt-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                Shade where you&apos;ve played
+              </Text>
               {COVERAGE_LEVELS.map((l) => {
-                const active = l.id === value;
+                const selected = l.id === value;
                 return (
                   <Pressable
                     key={l.id}
                     className={cn(
                       'flex-row items-center justify-between px-3 py-2.5 active:bg-muted',
-                      active && 'bg-muted/60'
+                      selected && 'bg-muted/60'
                     )}
                     onPress={() => {
                       onChange(l.id);
                       setAnchor(null);
                     }}
                     accessibilityRole="menuitem"
-                    accessibilityState={{ selected: active }}
+                    accessibilityState={{ selected }}
                   >
                     <Text
                       className={cn(
                         'text-sm',
-                        active ? 'font-semibold text-foreground' : 'text-muted-foreground'
+                        selected ? 'font-semibold text-foreground' : 'text-muted-foreground'
                       )}
                     >
                       {l.label}
                     </Text>
-                    {active && <Ionicons name="checkmark" size={16} color={colors.primaryBright} />}
+                    {selected && (
+                      <Ionicons name="checkmark" size={16} color={colors.primaryBright} />
+                    )}
                   </Pressable>
                 );
               })}
+              {note && (
+                <Text className="px-3 pb-1.5 pt-1 text-[10px] text-muted-foreground">{note}</Text>
+              )}
             </View>
           )}
         </Pressable>

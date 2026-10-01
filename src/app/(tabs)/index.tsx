@@ -18,7 +18,7 @@ import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
 import { colors, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
-import { CoverageLevel, coverageNote, coverageShapes } from '@/lib/coverage';
+import { CoverageLevel, coverageShapes } from '@/lib/coverage';
 import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
@@ -241,47 +241,56 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* Map / list toggle, with the appearance thumbnail opposite it */}
+        {/* Map / list toggle and the played filter, with the appearance thumbnail opposite */}
         <View className="flex-row items-center justify-between">
-          <View
-            className="flex-row self-start rounded-full border border-border bg-card/90 p-1"
-            style={{ height: APPEARANCE_BUTTON_SIZE }}
-            accessibilityRole="tablist"
-          >
-            {(
-              [
-                ['map', 'Map', 'earth'],
-                ['list', 'List', 'list'],
-              ] as const
-            ).map(([v, label, icon]) => {
-              const active = view === v;
-              return (
-                <Pressable
-                  key={v}
-                  className={cn(
-                    'flex-row items-center gap-1.5 rounded-full px-4',
-                    active ? 'bg-primary' : 'bg-transparent'
-                  )}
-                  onPress={() => setView(v)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                >
-                  <Ionicons
-                    name={icon}
-                    size={14}
-                    color={active ? colors.primaryForeground : colors.mutedForeground}
-                  />
-                  <Text
+          <View className="flex-row items-center gap-2">
+            <View
+              className="flex-row self-start rounded-full border border-border bg-card/90 p-1"
+              style={{ height: APPEARANCE_BUTTON_SIZE }}
+              accessibilityRole="tablist"
+            >
+              {(
+                [
+                  ['map', 'Map', 'earth'],
+                  ['list', 'List', 'list'],
+                ] as const
+              ).map(([v, label, icon]) => {
+                const active = view === v;
+                return (
+                  <Pressable
+                    key={v}
                     className={cn(
-                      'font-semibold text-xs',
-                      active ? 'text-primary-foreground' : 'text-muted-foreground'
+                      'flex-row items-center gap-1.5 rounded-full px-4',
+                      active ? 'bg-primary' : 'bg-transparent'
                     )}
+                    onPress={() => setView(v)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
                   >
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Ionicons
+                      name={icon}
+                      size={14}
+                      color={active ? colors.primaryForeground : colors.mutedForeground}
+                    />
+                    <Text
+                      className={cn(
+                        'font-semibold text-xs',
+                        active ? 'text-primary-foreground' : 'text-muted-foreground'
+                      )}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {showCoverage && (
+              <CoveragePicker
+                value={coverageLevel}
+                onChange={setCoverageLevel}
+                size={APPEARANCE_BUTTON_SIZE}
+              />
+            )}
           </View>
           {view === 'map' && (
             <AppearanceButton
@@ -290,18 +299,6 @@ export default function HomeScreen() {
             />
           )}
         </View>
-
-        {/* Shade where you've played, from city up to continent */}
-        {showCoverage && (
-          <View className="flex-row items-center gap-2">
-            <CoveragePicker value={coverageLevel} onChange={setCoverageLevel} />
-            {coverageNote(coverageLevel) && (
-              <Text className="text-[10px] text-muted-foreground">
-                {coverageNote(coverageLevel)}
-              </Text>
-            )}
-          </View>
-        )}
       </View>
 
       <ProgressSummary
