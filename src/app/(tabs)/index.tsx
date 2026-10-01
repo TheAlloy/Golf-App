@@ -6,7 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
 import type { ImageryStatus } from '@/components/terrain-layer';
-import { AppearanceButton, MapAppearance } from '@/components/appearance-button';
+import {
+  APPEARANCE_BUTTON_SIZE,
+  AppearanceButton,
+  MapAppearance,
+} from '@/components/appearance-button';
 import { CoveragePicker } from '@/components/coverage-picker';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
@@ -237,6 +241,7 @@ export default function HomeScreen() {
         <View className="flex-row items-center justify-between">
           <View
             className="flex-row self-start rounded-full border border-border bg-card/90 p-1"
+            style={{ height: APPEARANCE_BUTTON_SIZE }}
             accessibilityRole="tablist"
           >
             {(
@@ -250,7 +255,7 @@ export default function HomeScreen() {
                 <Pressable
                   key={v}
                   className={cn(
-                    'flex-row items-center gap-1.5 rounded-full px-4 py-1.5',
+                    'flex-row items-center gap-1.5 rounded-full px-4',
                     active ? 'bg-primary' : 'bg-transparent'
                   )}
                   onPress={() => setView(v)}

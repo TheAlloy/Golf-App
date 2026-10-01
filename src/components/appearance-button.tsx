@@ -13,8 +13,9 @@ const BLUE_MARBLE = require('../../assets/earth/blue-marble.jpg');
 const TEXTURE_W = 4096;
 const TEXTURE_H = 2048;
 
-/** Side of the square thumbnail, border included. */
-const SIZE = 46;
+/** Side of the square thumbnail, border included. Shared so the Map / List toggle can match it. */
+export const APPEARANCE_BUTTON_SIZE = 46;
+const SIZE = APPEARANCE_BUTTON_SIZE;
 const BORDER = 2;
 const INNER = SIZE - BORDER * 2;
 
