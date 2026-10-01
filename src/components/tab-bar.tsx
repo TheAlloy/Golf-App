@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,11 +29,10 @@ const TABS: Record<string, { label: string; icon: IconName }> = {
 };
 
 /**
- * A floating pill of five matching icons: four tabs, with a + in the middle
- * that opens the round logger rather than being a tab of its own.
+ * A floating pill of four matching tab icons. Rounds are logged from a
+ * course page, so the bar carries no action button.
  */
 export default function TabBar({ state, navigation }: BottomTabBarProps) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const renderTab = (index: number) => {
@@ -87,16 +85,6 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
       >
         {renderTab(0)}
         {renderTab(1)}
-        {/* Log a round: styled like a tab, but it opens the logger. */}
-        <Pressable
-          className="flex-1 items-center justify-center active:opacity-70"
-          onPress={() => router.push('/log-round')}
-          accessibilityRole="button"
-          accessibilityLabel="Log a round"
-          hitSlop={4}
-        >
-          <Ionicons name="search-outline" size={25} color={NAV_COLORS.icon} />
-        </Pressable>
         {renderTab(2)}
         {renderTab(3)}
       </View>

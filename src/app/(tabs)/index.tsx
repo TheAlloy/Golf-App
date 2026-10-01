@@ -191,7 +191,7 @@ export default function HomeScreen() {
             <View className="items-center gap-2 py-16">
               <Ionicons name="flag-outline" size={28} color={colors.mutedForeground} />
               <Text className="text-center text-sm text-muted-foreground">
-                Courses you play show up here. Tap + to log your first round.
+                Courses you play show up here. Open a course in Explore to log your first round.
               </Text>
             </View>
           }

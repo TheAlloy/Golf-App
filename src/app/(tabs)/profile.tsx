@@ -161,7 +161,7 @@ export default function ProfileScreen() {
           </View>
           {recent.length === 0 ? (
             <Text className="mt-2 text-sm text-muted-foreground">
-              Nothing logged yet — tap + to add your first round.
+              Nothing logged yet — open a course in Explore to add your first round.
             </Text>
           ) : (
             recent.map((r) => (
