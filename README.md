@@ -13,7 +13,9 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
   bar with a **+** in the middle that logs a round from anywhere.
 - **Globe** (Home) — an orthographic world globe (d3-geo + SVG) that
   starts dark and marks every course you have played in green and every
-  wishlisted one in lime yellow. Drag to spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
+  wishlisted one in lime yellow. A thumbnail in the top right switches to a
+  terrain view: NASA Blue Marble satellite imagery wrapped onto the sphere by a
+  GPU shader (expo-gl), with country borders and pins drawn over it. Drag to spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
 - **Real course data** — 15,667 US courses from the
   [OpenGolfAPI](https://github.com/opengolfapi/data) open dataset, including
   hole-by-hole par and stroke index, plus 60 curated international courses.
@@ -101,6 +103,9 @@ open dataset, which is derived from OpenStreetMap and licensed under the
 [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
 Country outlines on the globe come from
 [world-atlas](https://github.com/topojson/world-atlas) (Natural Earth, public domain).
+The terrain view uses NASA's
+[Blue Marble](https://visibleearth.nasa.gov/collection/1484/blue-marble) imagery
+(public domain), bundled as `assets/earth/blue-marble.jpg`.
 
 If you redistribute this app's data, ODbL requires you to attribute the source
 and share any modified database under the same licence.

@@ -11,6 +11,7 @@ import Svg, {
   Circle,
   ClipPath,
   Defs,
+  LinearGradient,
   Ellipse,
   G,
   Line,
@@ -23,6 +24,7 @@ import Svg, {
 import * as topojson from 'topojson-client';
 import countries110m from 'world-atlas/countries-110m.json';
 
+import TerrainLayer from '@/components/terrain-layer';
 import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 
 export const LAND = topojson.feature(
@@ -465,7 +467,18 @@ export default function Globe({
   }, [markers, projection, rotation, zoom]);
 
   return (
-    <View ref={container} {...(panHandlers ?? {})}>
+    <View ref={container} {...(panHandlers ?? {})} style={{ width, height }}>
+      {/* Satellite imagery on the GPU; the SVG above it leaves the disc clear. */}
+      {terrain && (
+        <TerrainLayer
+          width={width}
+          height={height}
+          cx={cx}
+          cy={cy}
+          radius={scale}
+          rotation={rotation}
+        />
+      )}
       <Svg width={width} height={height}>
         <Defs>
           <RadialGradient id="ocean" cx="38%" cy="32%" r="72%">
@@ -479,18 +492,19 @@ export default function Globe({
             <Stop offset="99%" stopColor={pal.atmosphere} stopOpacity="0.30" />
             <Stop offset="100%" stopColor={pal.atmosphere} stopOpacity="0" />
           </RadialGradient>
-          <RadialGradient id="shade" cx="36%" cy="32%" r="78%">
-            <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.16" />
-            <Stop offset="45%" stopColor="#ffffff" stopOpacity="0" />
-            <Stop offset="100%" stopColor="#000000" stopOpacity="0.38" />
-          </RadialGradient>
+          <LinearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor={GLOBE_COLORS.oceanDeep} stopOpacity="0.92" />
+            <Stop offset="100%" stopColor={GLOBE_COLORS.oceanDeep} stopOpacity="0" />
+          </LinearGradient>
           <ClipPath id="viewport">
             <Rect x="0" y="0" width={width} height={height} />
           </ClipPath>
         </Defs>
 
         <G clipPath="url(#viewport)">
-          {STARS.map((st, i) => (
+          {STARS.filter(
+            (st) => !terrain || Math.hypot(st.x * width - cx, st.y * height - cy) > scale + 2
+          ).map((st, i) => (
             <Circle
               key={`s${i}`}
               cx={st.x * width}
@@ -503,7 +517,7 @@ export default function Globe({
 
           {/* Halo, sphere, then a crisp limb so the edge reads as a horizon. */}
           <Circle cx={cx} cy={cy} r={scale * 1.05} fill="url(#atmosphere)" />
-          <Circle cx={cx} cy={cy} r={scale} fill="url(#ocean)" />
+          {!terrain && <Circle cx={cx} cy={cy} r={scale} fill="url(#ocean)" />}
           <Circle
             cx={cx}
             cy={cy}
@@ -514,14 +528,23 @@ export default function Globe({
             opacity={0.32}
           />
 
-          <Path d={graticulePath} stroke={pal.graticule} strokeWidth={0.5} fill="none" />
+          {!terrain && (
+            <Path d={graticulePath} stroke={pal.graticule} strokeWidth={0.5} fill="none" />
+          )}
 
+          {/* Terrain only: imagery can fill the screen, so shade the header strip. */}
+          {terrain && <Rect x={0} y={0} width={width} height={180} fill="url(#scrim)" />}
+
+          {/* Terrain keeps only faint borders over the imagery, like Earth does. */}
           {landPaths.map((d, i) => (
-            <Path key={`l${i}`} d={d} fill={pal.land} stroke={pal.landStroke} strokeWidth={0.5} />
+            <Path
+              key={`l${i}`}
+              d={d}
+              fill={terrain ? 'none' : pal.land}
+              stroke={pal.landStroke}
+              strokeWidth={terrain ? 0.4 : 0.5}
+            />
           ))}
-
-          {/* Terrain only: a lit side and a shadowed limb so the sphere reads as solid. */}
-          {terrain && <Circle cx={cx} cy={cy} r={scale} fill="url(#shade)" />}
 
           {pins.map((p) => {
             const color = p.kind === 'wishlist' ? pal.wishlist : pal.pin;
