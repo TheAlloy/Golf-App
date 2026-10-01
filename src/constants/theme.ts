@@ -63,7 +63,7 @@ export const GLOBE_COLORS = {
   atmosphere: 'hsl(0, 0%, 82%)',
   limb: 'hsl(0, 0%, 72%)',
   pin: 'hsl(158, 83%, 30%)',
-  wishlist: 'hsl(330, 90%, 68%)',
+  wishlist: 'hsl(68, 92%, 60%)',
   pinLabel: 'hsl(0, 0%, 90%)',
   callout: 'hsla(0, 0%, 6%, 0.92)',
   calloutEdge: 'hsla(0, 0%, 100%, 0.12)',

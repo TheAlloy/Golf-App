@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, SectionList, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,14 +51,6 @@ export default function HomeScreen() {
   );
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [view, setView] = useState<HomeView>('map');
-  // The idle spin only runs while the globe is actually on screen.
-  const [focused, setFocused] = useState(true);
-  useFocusEffect(
-    useCallback(() => {
-      setFocused(true);
-      return () => setFocused(false);
-    }, [])
-  );
 
   const playedCourses = useMemo(
     () =>
@@ -79,7 +71,7 @@ export default function HomeScreen() {
 
   const cells = useMemo(() => buildHeatCells(playedCourses), [playedCourses]);
 
-  // Wishlisted courses you haven't played yet, as their own pink markers.
+  // Wishlisted courses you haven't played yet, as their own lime-yellow markers.
   const wishedCourses = useMemo(
     () =>
       wishlist
@@ -147,7 +139,7 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Kept mounted in list view so the globe keeps its spin and zoom. */}
+      {/* Kept mounted in list view so the globe keeps its position and zoom. */}
       <View className="flex-1" style={{ display: view === 'map' ? 'flex' : 'none' }}>
         <Globe
           width={width}
@@ -158,7 +150,6 @@ export default function HomeScreen() {
           onZoomChange={setZoom}
           onSelectMarker={onSelectMarker}
           initialCentre={initialCentre}
-          idleSpin={focused && view === 'map'}
         />
       </View>
 

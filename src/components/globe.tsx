@@ -52,7 +52,7 @@ export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 8;
 
 /** Gap between the fully zoomed-out globe and the edges of the screen. */
-export const GLOBE_EDGE_PADDING = 16;
+export const GLOBE_EDGE_PADDING = 24;
 
 /** Sphere radius: fits the shorter edge with padding, then scales with zoom. */
 function globeRadius(width: number, height: number, zoom: number): number {
@@ -64,7 +64,7 @@ export type GlobeMarker = {
   latitude: number;
   longitude: number;
   label: string;
-  /** Played courses pin in lime; wishlisted ones in pink. */
+  /** Played courses pin in green; wishlisted ones in lime yellow. */
   kind?: 'played' | 'wishlist';
   /** Status line for the close-up callout, e.g. "Played · 3 rounds". */
   detail?: string;
@@ -74,11 +74,6 @@ export type GlobeMarker = {
 export const FLAG_ZOOM = 5;
 /** How quickly zoom eases toward its target; lower is snappier. */
 const ZOOM_EASE_MS = 90;
-
-/** How long the globe waits without interaction before turning on its own. */
-export const IDLE_SPIN_DELAY_MS = 10_000;
-/** Idle spin speed in degrees per second (a turn a minute). */
-const IDLE_SPIN_DEG_PER_SEC = 6;
 
 type Props = {
   width: number;
@@ -92,11 +87,6 @@ type Props = {
   onSelectMarker?: (id: string) => void;
   /** Where the globe faces on first render, as [longitude, latitude]. */
   initialCentre?: [number, number] | null;
-  /**
-   * Turn slowly on its own after IDLE_SPIN_DELAY_MS without interaction.
-   * Pass false while the globe is off screen so it doesn't burn frames.
-   */
-  idleSpin?: boolean;
 };
 
 export default function Globe({
@@ -108,7 +98,6 @@ export default function Globe({
   onZoomChange,
   onSelectMarker,
   initialCentre = null,
-  idleSpin = true,
 }: Props) {
   const [rotation, setRotation] = useState<[number, number]>([70, -15]);
   const rotationRef = useRef<[number, number]>([70, -15]);
@@ -122,8 +111,6 @@ export default function Globe({
   // remaining finger carries on from where the globe is rather than jumping.
   const dragOrigin = useRef({ dx: 0, dy: 0 });
   const container = useRef<View>(null);
-  // Any touch, drag, pinch or wheel pushes the idle spin back another 10s.
-  const lastInteraction = useRef(0);
   const sizeRef = useRef({ width, height });
   // Where the globe's canvas sits in the window, so finger positions (page
   // coordinates) can be turned into canvas coordinates.
@@ -235,7 +222,6 @@ export default function Globe({
         setRotation(rot);
       }
       userDriving.current = true;
-      lastInteraction.current = Date.now();
       zoomRef.current = clamped;
       onZoomRef.current?.(clamped);
     },
@@ -256,7 +242,6 @@ export default function Globe({
       zoomFocus.current = { x: fx, y: fy };
       // Measure what is under the fingers once per event, not every frame.
       zoomAnchor.current = geoUnder(fx, fy);
-      lastInteraction.current = Date.now();
       if (reduceMotionRef.current) {
         zoomTarget.current = null;
         applyZoom(target, fx, fy, zoomAnchor.current);
@@ -309,7 +294,6 @@ export default function Globe({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
         userDriving.current = true;
-        lastInteraction.current = Date.now();
         gestureStart.current = rotationRef.current;
         pinchStart.current = null;
         pinched.current = e.nativeEvent.touches.length > 1;
@@ -324,7 +308,6 @@ export default function Globe({
         }
       },
       onPanResponderMove: (e, g) => {
-        lastInteraction.current = Date.now();
         const touches = e.nativeEvent.touches;
         moved.current = Math.max(moved.current, Math.abs(g.dx) + Math.abs(g.dy));
 
@@ -364,7 +347,6 @@ export default function Globe({
         setRotation([lambda, phi]);
       },
       onPanResponderRelease: (e) => {
-        lastInteraction.current = Date.now();
         // A press that barely moved is a tap, not a drag.
         if (moved.current < 6 && !pinched.current) tapRef.current?.(e);
         pinchStart.current = null;
@@ -418,13 +400,11 @@ export default function Globe({
     };
   }, []);
 
-  // Respect the system's reduce-motion setting: no idle spin at all.
-  const [reduceMotion, setReduceMotion] = useState(false);
+  // Respect the system's reduce-motion setting: zoom snaps instead of easing.
   useEffect(() => {
     let live = true;
     const update = (on: boolean) => {
       reduceMotionRef.current = on;
-      setReduceMotion(on);
     };
     AccessibilityInfo.isReduceMotionEnabled()
       .then((on) => live && update(on))
@@ -435,32 +415,6 @@ export default function Globe({
       sub.remove();
     };
   }, []);
-
-  useEffect(() => {
-    if (!idleSpin || reduceMotion) return;
-    // Coming back on screen counts as a fresh start, so it waits the full
-    // delay again rather than spinning the moment you return.
-    lastInteraction.current = Date.now();
-    let frame = 0;
-    let last = 0;
-    const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      const dt = last ? now - last : 0;
-      // ~30fps is plenty for a slow turn and halves the redraw cost.
-      if (last && dt < 33) return;
-      last = now;
-      if (Date.now() - lastInteraction.current < IDLE_SPIN_DELAY_MS) return;
-      // Only the whole-world view spins; a close-up stays where you left it.
-      if (zoomRef.current > MIN_ZOOM + 0.001) return;
-      const step = (IDLE_SPIN_DEG_PER_SEC * Math.min(dt, 100)) / 1000;
-      const [l, phi] = rotationRef.current;
-      const next: [number, number] = [(l + step) % 360, phi];
-      rotationRef.current = next;
-      setRotation(next);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [idleSpin, reduceMotion]);
 
   const { landPaths, graticulePath, blobs, pins, glow } = useMemo(() => {
     const path = geoPath(projection);
@@ -488,7 +442,7 @@ export default function Globe({
       })
       .filter((d): d is NonNullable<typeof d> => d !== null);
 
-    // Every course gets a dot at every zoom, green for played and pink for
+    // Every course gets a dot at every zoom, green for played and lime yellow for
     // wishlisted, so the two always read apart; names wait for zoom 3.
     const placed = markers
       .filter((m) => visible(m.longitude, m.latitude))
