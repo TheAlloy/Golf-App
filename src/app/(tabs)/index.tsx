@@ -11,6 +11,7 @@ import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
 import { colors, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
+import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
 import { usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
@@ -272,6 +273,17 @@ export default function HomeScreen() {
             <LegendDot color={palette.pin} label="Played" />
             <LegendDot color={palette.wishlist} label="Wishlist" />
           </View>
+        </View>
+      )}
+
+      {/* Imagery providers ask to be credited while their tiles are on screen. */}
+      {view === 'map' && appearance === 'terrain' && IMAGERY_ENABLED && (
+        <View
+          className="absolute right-4 rounded-md bg-background/60 px-2 py-1"
+          style={{ bottom: tabSpace + 16 }}
+          pointerEvents="none"
+        >
+          <Text className="text-[10px] text-muted-foreground">Imagery © {IMAGERY.attribution}</Text>
         </View>
       )}
     </View>

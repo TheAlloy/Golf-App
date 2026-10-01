@@ -74,6 +74,29 @@ npx expo start
 Scan the QR code with Expo Go (iOS/Android). `npx expo start --web` works too —
 the globe renders on web; only the course pin map is native-only.
 
+### Satellite imagery
+
+The terrain view wraps a bundled whole-earth texture onto the globe, then
+sharpens it with streamed Web Mercator tiles as you zoom in. Out of the box it
+streams EOX's Sentinel-2 cloudless mosaic (free with attribution, no key,
+~10 m per pixel). For sharper imagery point it at another provider with
+`EXPO_PUBLIC_*` variables (see `.env.example`):
+
+| Provider | `EXPO_PUBLIC_IMAGERY_TILES` | Max zoom | Notes |
+| --- | --- | --- | --- |
+| EOX Sentinel-2 (default) | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg` | 14 | Free, attribution required |
+| Esri World Imagery | `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` | 19 | Free tier needs an ArcGIS key for production |
+| Mapbox Satellite | `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=…` | 22 | Set tile size 512 |
+| MapTiler Satellite | `https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=…` | 20 | |
+
+Set `EXPO_PUBLIC_IMAGERY_MAX_ZOOM`, `EXPO_PUBLIC_IMAGERY_TILE_SIZE` (256 or
+512) and `EXPO_PUBLIC_IMAGERY_ATTRIBUTION` to match, and show the provider's
+attribution as its terms require (the app prints it over the globe). Set
+`EXPO_PUBLIC_IMAGERY_TILES=off` to disable streaming and keep the bundled
+texture only. Google's imagery is only available through Google's own Map
+Tiles API, which needs a billed Cloud project and a session token flow this
+app doesn't implement.
+
 ## Project layout
 
 ```
@@ -105,7 +128,9 @@ Country outlines on the globe come from
 [world-atlas](https://github.com/topojson/world-atlas) (Natural Earth, public domain).
 The terrain view uses NASA's
 [Blue Marble](https://visibleearth.nasa.gov/collection/1484/blue-marble) imagery
-(public domain), bundled as `assets/earth/blue-marble.jpg`.
+(public domain), bundled as `assets/earth/blue-marble.jpg`. Streamed tiles are
+[Sentinel-2 cloudless](https://s2maps.eu) by [EOX IT Services GmbH](https://eox.at)
+(contains modified Copernicus Sentinel data), unless configured otherwise.
 
 If you redistribute this app's data, ODbL requires you to attribute the source
 and share any modified database under the same licence.
