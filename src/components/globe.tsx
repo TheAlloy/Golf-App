@@ -479,7 +479,8 @@ export default function Globe({
           rotation={rotation}
         />
       )}
-      <Svg width={width} height={height}>
+      {/* Positioned so the vector layer paints above the absolutely placed GL canvas. */}
+      <Svg width={width} height={height} style={{ position: 'relative', zIndex: 1 }}>
         <Defs>
           <RadialGradient id="ocean" cx="38%" cy="32%" r="72%">
             <Stop offset="0%" stopColor={pal.oceanHigh} />
