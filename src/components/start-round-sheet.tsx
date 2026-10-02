@@ -130,7 +130,6 @@ export function StartRoundSheet({ visible, onClose }: Props) {
         >
           {step.kind === 'choose' && (
             <>
-              <Text className="font-bold text-lg text-foreground">New round</Text>
               <Option
                 icon="navigate-outline"
                 title="Play a round now"
