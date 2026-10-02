@@ -164,179 +164,192 @@ export default function LogRoundScreen() {
           </>
         )}
 
-        <Text className="mt-2 font-semibold text-sm">Date</Text>
-        <Input value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
-
-        <Text className="mt-2 font-semibold text-sm">Holes</Text>
-        <View className="flex-row flex-wrap items-center gap-2">
-          {([9, 18] as const).map((h) => (
-            <Pressable
-              key={h}
-              className={chip(holesPlayed === h)}
-              onPress={() => setHolesPlayed(h)}
-            >
-              <Text
-                className={cn(
-                  'text-sm',
-                  holesPlayed === h ? 'text-primary-foreground' : 'text-foreground'
-                )}
-              >
-                {h} holes
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* How much detail to record */}
-        <Text className="mt-2 font-semibold text-sm">Scoring</Text>
-        <View className="flex-row rounded-xl bg-card p-1">
-          {(
-            [
-              ['score', 'Final score', 'Quickest'],
-              ['holes', 'Hole by hole', 'Unlocks stats'],
-            ] as const
-          ).map(([m, label, hint]) => (
-            <Pressable
-              key={m}
-              className={cn(
-                'flex-1 items-center rounded-lg py-2',
-                mode === m ? 'bg-elevated' : 'bg-transparent'
-              )}
-              onPress={() => setMode(m)}
-            >
-              <Text
-                className={cn(
-                  'font-semibold text-sm',
-                  mode === m ? 'text-foreground' : 'text-muted-foreground'
-                )}
-              >
-                {label}
-              </Text>
-              <Text className="text-[10px] text-muted-foreground">{hint}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {mode === 'score' ? (
+        {/* The rest of the form waits for a course, so the search has the screen to itself. */}
+        {selectedCourse && (
           <>
-            <Input
-              value={score}
-              onChangeText={setScore}
-              keyboardType="number-pad"
-              placeholder={par ? `e.g. ${par + 12}` : 'e.g. 84'}
-            />
-            {par !== undefined && score !== '' && Number(score) > 0 && (
-              <Text className="text-xs text-muted-foreground">
-                {Number(score) - par === 0
-                  ? 'Level par'
-                  : `${Number(score) - par > 0 ? '+' : ''}${Number(score) - par} to par`}
-              </Text>
-            )}
-          </>
-        ) : (
-          <>
-            <ScorecardScan
-              holes={holesPlayed}
-              pars={selectedCourse?.holePars}
-              onScores={(strokes) =>
-                setHoleScores((prev) =>
-                  Array.from({ length: holesPlayed }, (_, i) => ({
-                    ...prev[i],
-                    strokes: strokes[i],
-                  }))
-                )
-              }
-              onPhoto={(uri) => setPhotos((p) => (p.includes(uri) ? p : [...p, uri]))}
-            />
-            <Text className="mt-1 font-semibold text-sm">Scores</Text>
-            <ScorecardQuickEntry
-              holes={holesPlayed}
-              pars={selectedCourse?.holePars}
-              value={holeScores}
-              onChange={setHoleScores}
-            />
-            <View className="flex-row items-center justify-between rounded-lg bg-card p-3">
-              <Text className="text-sm text-muted-foreground">
-                {cardTotal !== undefined ? 'Card total' : 'Type or scan your scores above'}
-              </Text>
-              {cardTotal !== undefined && (
-                <Text className="font-bold text-lg text-primary-bright">{cardTotal}</Text>
-              )}
+            <Text className="mt-2 font-semibold text-sm">Date</Text>
+            <Input value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+
+            <Text className="mt-2 font-semibold text-sm">Holes</Text>
+            <View className="flex-row flex-wrap items-center gap-2">
+              {([9, 18] as const).map((h) => (
+                <Pressable
+                  key={h}
+                  className={chip(holesPlayed === h)}
+                  onPress={() => setHolesPlayed(h)}
+                >
+                  <Text
+                    className={cn(
+                      'text-sm',
+                      holesPlayed === h ? 'text-primary-foreground' : 'text-foreground'
+                    )}
+                  >
+                    {h} holes
+                  </Text>
+                </Pressable>
+              ))}
             </View>
-            {!selectedCourse?.holePars && (
-              <View className="flex-row items-start gap-2 rounded-lg bg-card p-3">
-                <Ionicons name="information-circle" size={16} color={colors.info} />
-                <Text className="flex-1 text-xs text-muted-foreground">
-                  This course has no hole-by-hole par on file, so greens in regulation cannot be
-                  worked out. Scores, putts and fairways will still be recorded.
-                </Text>
+
+            {/* How much detail to record */}
+            <Text className="mt-2 font-semibold text-sm">Scoring</Text>
+            <View className="flex-row rounded-xl bg-card p-1">
+              {(
+                [
+                  ['score', 'Final score', 'Quickest'],
+                  ['holes', 'Hole by hole', 'Unlocks stats'],
+                ] as const
+              ).map(([m, label, hint]) => (
+                <Pressable
+                  key={m}
+                  className={cn(
+                    'flex-1 items-center rounded-lg py-2',
+                    mode === m ? 'bg-elevated' : 'bg-transparent'
+                  )}
+                  onPress={() => setMode(m)}
+                >
+                  <Text
+                    className={cn(
+                      'font-semibold text-sm',
+                      mode === m ? 'text-foreground' : 'text-muted-foreground'
+                    )}
+                  >
+                    {label}
+                  </Text>
+                  <Text className="text-[10px] text-muted-foreground">{hint}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {mode === 'score' ? (
+              <>
+                <Input
+                  value={score}
+                  onChangeText={setScore}
+                  keyboardType="number-pad"
+                  placeholder={par ? `e.g. ${par + 12}` : 'e.g. 84'}
+                />
+                {par !== undefined && score !== '' && Number(score) > 0 && (
+                  <Text className="text-xs text-muted-foreground">
+                    {Number(score) - par === 0
+                      ? 'Level par'
+                      : `${Number(score) - par > 0 ? '+' : ''}${Number(score) - par} to par`}
+                  </Text>
+                )}
+              </>
+            ) : (
+              <>
+                <ScorecardScan
+                  holes={holesPlayed}
+                  pars={selectedCourse?.holePars}
+                  onScores={(strokes) =>
+                    setHoleScores((prev) =>
+                      Array.from({ length: holesPlayed }, (_, i) => ({
+                        ...prev[i],
+                        strokes: strokes[i],
+                      }))
+                    )
+                  }
+                  onPhoto={(uri) => setPhotos((p) => (p.includes(uri) ? p : [...p, uri]))}
+                />
+                <Text className="mt-1 font-semibold text-sm">Scores</Text>
+                <ScorecardQuickEntry
+                  holes={holesPlayed}
+                  pars={selectedCourse?.holePars}
+                  value={holeScores}
+                  onChange={setHoleScores}
+                />
+                <View className="flex-row items-center justify-between rounded-lg bg-card p-3">
+                  <Text className="text-sm text-muted-foreground">
+                    {cardTotal !== undefined ? 'Card total' : 'Type or scan your scores above'}
+                  </Text>
+                  {cardTotal !== undefined && (
+                    <Text className="font-bold text-lg text-primary-bright">{cardTotal}</Text>
+                  )}
+                </View>
+                {!selectedCourse?.holePars && (
+                  <View className="flex-row items-start gap-2 rounded-lg bg-card p-3">
+                    <Ionicons name="information-circle" size={16} color={colors.info} />
+                    <Text className="flex-1 text-xs text-muted-foreground">
+                      This course has no hole-by-hole par on file, so greens in regulation cannot be
+                      worked out. Scores, putts and fairways will still be recorded.
+                    </Text>
+                  </View>
+                )}
+                <Text className="mt-1 font-semibold text-sm">Putts and fairways</Text>
+                <ScorecardEntry
+                  holes={holesPlayed}
+                  pars={selectedCourse?.holePars}
+                  value={holeScores}
+                  onChange={setHoleScores}
+                />
+              </>
+            )}
+
+            <Text className="mt-2 font-semibold text-sm">Played with</Text>
+            {friends.length === 0 ? (
+              <Text className="text-sm text-muted-foreground">
+                Add friends from your Profile to tag playing partners.
+              </Text>
+            ) : (
+              <View className="flex-row flex-wrap items-center gap-2">
+                {friends.map((f) => (
+                  <Pressable
+                    key={f.id}
+                    className={chip(playedWith.includes(f.id))}
+                    onPress={() => togglePartner(f.id)}
+                  >
+                    <Text
+                      className={cn(
+                        'text-sm',
+                        playedWith.includes(f.id) ? 'text-primary-foreground' : 'text-foreground'
+                      )}
+                    >
+                      {f.name}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
             )}
-            <Text className="mt-1 font-semibold text-sm">Putts and fairways</Text>
-            <ScorecardEntry
-              holes={holesPlayed}
-              pars={selectedCourse?.holePars}
-              value={holeScores}
-              onChange={setHoleScores}
+
+            <Text className="mt-2 font-semibold text-sm">Occasion</Text>
+            <Input value={occasion} onChangeText={setOccasion} placeholder="e.g. Society day" />
+
+            <Text className="mt-2 font-semibold text-sm">Tags</Text>
+            <Input
+              value={tags}
+              onChangeText={setTags}
+              placeholder="links, windy (comma separated)"
             />
+
+            <Text className="mt-2 font-semibold text-sm">Photos</Text>
+            <View className="flex-row flex-wrap items-center gap-2">
+              {photos.map((uri) => (
+                <Image
+                  key={uri}
+                  source={{ uri }}
+                  style={{ width: 56, height: 56, borderRadius: 8 }}
+                />
+              ))}
+              <Pressable className={chip(false)} onPress={pickPhoto}>
+                <Text className="text-sm">+ Add photo</Text>
+              </Pressable>
+            </View>
+
+            <Text className="mt-2 font-semibold text-sm">Notes</Text>
+            <Input
+              className="h-24 py-3"
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              textAlignVertical="top"
+              placeholder="Conditions, best shot, who won the money…"
+            />
+
+            <Button className="mt-4" onPress={save}>
+              <Text>Save round</Text>
+            </Button>
           </>
         )}
-
-        <Text className="mt-2 font-semibold text-sm">Played with</Text>
-        {friends.length === 0 ? (
-          <Text className="text-sm text-muted-foreground">
-            Add friends from your Profile to tag playing partners.
-          </Text>
-        ) : (
-          <View className="flex-row flex-wrap items-center gap-2">
-            {friends.map((f) => (
-              <Pressable
-                key={f.id}
-                className={chip(playedWith.includes(f.id))}
-                onPress={() => togglePartner(f.id)}
-              >
-                <Text
-                  className={cn(
-                    'text-sm',
-                    playedWith.includes(f.id) ? 'text-primary-foreground' : 'text-foreground'
-                  )}
-                >
-                  {f.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        <Text className="mt-2 font-semibold text-sm">Occasion</Text>
-        <Input value={occasion} onChangeText={setOccasion} placeholder="e.g. Society day" />
-
-        <Text className="mt-2 font-semibold text-sm">Tags</Text>
-        <Input value={tags} onChangeText={setTags} placeholder="links, windy (comma separated)" />
-
-        <Text className="mt-2 font-semibold text-sm">Photos</Text>
-        <View className="flex-row flex-wrap items-center gap-2">
-          {photos.map((uri) => (
-            <Image key={uri} source={{ uri }} style={{ width: 56, height: 56, borderRadius: 8 }} />
-          ))}
-          <Pressable className={chip(false)} onPress={pickPhoto}>
-            <Text className="text-sm">+ Add photo</Text>
-          </Pressable>
-        </View>
-
-        <Text className="mt-2 font-semibold text-sm">Notes</Text>
-        <Input
-          className="h-24 py-3"
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-          textAlignVertical="top"
-          placeholder="Conditions, best shot, who won the money…"
-        />
-
-        <Button className="mt-4" onPress={save}>
-          <Text>Save round</Text>
-        </Button>
       </ScrollView>
     </View>
   );
