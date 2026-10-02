@@ -76,12 +76,12 @@ export function ProgressSummary({
         >
           {/* Level and points */}
           <View className="flex-row items-start justify-between">
-            <View className="flex-1 gap-0.5">
+            <View className="flex-1 gap-1">
               <Text className="text-xs uppercase tracking-wide text-muted-foreground">
                 Level {level.number}
               </Text>
               <Text className="font-bold text-2xl text-foreground">{level.name}</Text>
-              <View className="flex-row items-center gap-1.5">
+              <View className="flex-row items-center gap-2">
                 <Ionicons name="sparkles" size={14} color={colors.warm} />
                 <Text className="font-semibold text-base text-foreground">
                   {progression.total.toLocaleString()} points
@@ -99,7 +99,7 @@ export function ProgressSummary({
           </View>
 
           {/* Progress to the next level */}
-          <View className="gap-1.5">
+          <View className="gap-2">
             <View className="h-2 overflow-hidden rounded-full bg-card">
               <View
                 className="h-full rounded-full bg-primary-bright"
@@ -147,7 +147,7 @@ export function ProgressSummary({
           {/* On to the full pages */}
           <View className="flex-row gap-2">
             <Pressable
-              className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full bg-primary py-2.5 active:opacity-80"
+              className="flex-1 flex-row items-center justify-center gap-2 rounded-full bg-primary py-3 active:opacity-80"
               onPress={() => go('/achievements')}
               accessibilityRole="button"
             >
@@ -155,7 +155,7 @@ export function ProgressSummary({
               <Text className="font-semibold text-sm text-primary-foreground">Achievements</Text>
             </Pressable>
             <Pressable
-              className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-border bg-card py-2.5 active:opacity-80"
+              className="flex-1 flex-row items-center justify-center gap-2 rounded-full border border-border bg-card py-3 active:opacity-80"
               onPress={() => go('/friends')}
               accessibilityRole="button"
             >

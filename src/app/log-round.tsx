@@ -118,7 +118,7 @@ export default function LogRoundScreen() {
 
   const chip = (active: boolean) =>
     cn(
-      'rounded-full border px-4 py-1.5',
+      'rounded-full border px-4 py-2',
       active ? 'border-primary bg-primary' : 'border-border bg-background'
     );
 

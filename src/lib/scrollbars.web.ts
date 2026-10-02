@@ -10,7 +10,7 @@
  */
 
 const THUMB = 3; // px
-const EDGE = 2.5; // gap from the edge of the scroll view
+const EDGE = 4; // gap from the edge of the scroll view
 const INSET = 4; // gap from the ends of the track
 const MIN_LENGTH = 36;
 const FADE_AFTER = 900; // ms

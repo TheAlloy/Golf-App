@@ -10,11 +10,13 @@ function Card({ className, ...props }: DivProps) {
 }
 
 function CardHeader({ className, ...props }: DivProps) {
-  return <View className={cn('gap-1.5 p-4', className)} {...props} />;
+  return <View className={cn('gap-2 p-4', className)} {...props} />;
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<typeof Text>) {
-  return <Text className={cn('text-lg font-semibold text-card-foreground', className)} {...props} />;
+  return (
+    <Text className={cn('text-lg font-semibold text-card-foreground', className)} {...props} />
+  );
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<typeof Text>) {

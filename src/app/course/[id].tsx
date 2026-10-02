@@ -54,7 +54,7 @@ export default function CourseDetailScreen() {
             </Text>
           </View>
           {wish?.completedRound ? (
-            <View className="mt-1 rounded-full bg-primary-bright/20 px-3 py-1.5">
+            <View className="mt-1 rounded-full bg-primary-bright/20 px-3 py-2">
               <Text className="font-semibold text-xs text-primary-bright">Wishlist ✓</Text>
             </View>
           ) : (
@@ -102,7 +102,7 @@ export default function CourseDetailScreen() {
           <Text className="text-sm text-muted-foreground">No rounds logged yet.</Text>
         )}
         {rounds.map((r) => (
-          <View key={r.id} className="gap-0.5 py-2">
+          <View key={r.id} className="gap-1 py-2">
             <Text>
               {r.date} · {r.holesPlayed} holes
               {r.score !== undefined ? ` · ${r.score} (${r.toPar! >= 0 ? '+' : ''}${r.toPar})` : ''}

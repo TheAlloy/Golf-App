@@ -95,7 +95,7 @@ export default function LiveScorecard({
           {columns.map((p) => (
             <Pressable
               key={p.id}
-              className="flex-1 items-center gap-1 px-0.5"
+              className="flex-1 items-center gap-1 px-1"
               onLongPress={() => p.id !== 'me' && removeLivePlayer(p.id)}
               accessibilityLabel={p.id === 'me' ? p.name : `${p.name}. Hold to remove`}
             >
@@ -114,7 +114,7 @@ export default function LiveScorecard({
           ))}
           {columns.length < MAX_LIVE_PLAYERS && (
             <Pressable
-              className="flex-1 items-center gap-1 px-0.5 active:opacity-70"
+              className="flex-1 items-center gap-1 px-1 active:opacity-70"
               onPress={() => setAdding(true)}
               accessibilityRole="button"
               accessibilityLabel="Add a player"
@@ -196,7 +196,7 @@ export default function LiveScorecard({
 
         <View className="mx-4 mt-4 gap-2">
           <Pressable
-            className="flex-row items-center justify-center gap-2 rounded-full bg-primary py-3.5 active:opacity-80"
+            className="flex-row items-center justify-center gap-2 rounded-full bg-primary py-4 active:opacity-80"
             onPress={onFinish}
             accessibilityRole="button"
           >
@@ -297,7 +297,7 @@ function ScoreCell({
               : 'double';
   return (
     <Pressable
-      className="flex-1 items-center justify-center py-1.5 active:opacity-70"
+      className="flex-1 items-center justify-center py-2 active:opacity-70"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${strokes ?? 'no score'}`}
@@ -391,7 +391,7 @@ function HolesToggle({ holes, onChange }: { holes: 9 | 18; onChange: (h: 9 | 18)
       {([9, 18] as const).map((h) => (
         <Pressable
           key={h}
-          className={cn('px-2.5 py-1', holes === h && 'bg-primary')}
+          className={cn('px-3 py-1', holes === h && 'bg-primary')}
           onPress={() => onChange(h)}
           accessibilityRole="button"
           accessibilityState={{ selected: holes === h }}

@@ -74,7 +74,7 @@ export default function AchievementsScreen() {
             </View>
             <View className="flex-1">
               <Text className="font-bold text-xl text-foreground">{level.name}</Text>
-              <View className="mt-0.5 flex-row items-center gap-1">
+              <View className="mt-1 flex-row items-center gap-1">
                 <Ionicons name="sparkles" size={14} color={colors.warm} />
                 <Text className="font-bold text-base" style={{ color: colors.warm }}>
                   {progression.total.toLocaleString()} pts
@@ -82,13 +82,13 @@ export default function AchievementsScreen() {
               </View>
             </View>
           </View>
-          <View className="mt-4 h-2.5 overflow-hidden rounded-full bg-elevated">
+          <View className="mt-4 h-2 overflow-hidden rounded-full bg-elevated">
             <View
               className="h-full rounded-full bg-primary"
               style={{ width: `${Math.max(3, level.progress * 100)}%` }}
             />
           </View>
-          <Text className="mt-1.5 text-xs text-muted-foreground">
+          <Text className="mt-2 text-xs text-muted-foreground">
             {level.next === null
               ? 'Top of the ladder.'
               : `${(level.next - progression.total).toLocaleString()} pts to ${level.nextName}`}
@@ -117,7 +117,7 @@ export default function AchievementsScreen() {
         {/* Wishlist quests */}
         <View className="rounded-2xl bg-card p-4">
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-1.5">
+            <View className="flex-row items-center gap-2">
               <Ionicons name="map" size={16} color={colors.primaryBright} />
               <Text className="font-semibold text-base">Wishlist quests</Text>
             </View>
@@ -240,11 +240,11 @@ function Badge({ achievement: a }: { achievement: Achievement }) {
       >
         {a.name}
       </Text>
-      <Text className="mt-0.5 text-center text-[10px] text-muted-foreground" numberOfLines={2}>
+      <Text className="mt-1 text-center text-[10px] text-muted-foreground" numberOfLines={2}>
         {a.description}
       </Text>
       {a.earned ? (
-        <Text className="mt-1.5 font-semibold text-[10px]" style={{ color: medal }}>
+        <Text className="mt-2 font-semibold text-[10px]" style={{ color: medal }}>
           +{a.points} pts
         </Text>
       ) : (

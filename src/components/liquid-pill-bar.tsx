@@ -17,10 +17,10 @@ const ACTIVE_HEIGHT = TAB_BAR_HEIGHT - PILL_INSET * 2;
 /** How far the pill stretches while in flight, as a multiple of its width. */
 const STRETCH = 1.35;
 
-/** Gap between the pill and the bottom of the screen. */
+/** Gap between the pill and the bottom of the screen, on the 4px grid. */
 export function barOffset(bottomInset: number): number {
   // Sit just above the home indicator, or a little off the edge without one.
-  return Math.max(bottomInset - 8, 14);
+  return Math.max(Math.ceil((bottomInset - 8) / 4) * 4, 16);
 }
 
 /** Space a screen should leave at the bottom so content clears the bar. */
@@ -109,13 +109,13 @@ export function LiquidPillBar({ slots, activeSlot }: Props) {
         className="flex-row items-center rounded-full"
         style={{
           height: TAB_BAR_HEIGHT,
-          paddingHorizontal: PILL_INSET,
+          paddingHorizontal: PILL_INSET - 1,
           backgroundColor: NAV_COLORS.pill,
           borderWidth: 1,
           borderColor: NAV_COLORS.pillEdge,
           boxShadow: '0 14px 32px rgba(0, 0, 0, 0.55)',
         }}
-        onLayout={(e) => setSlotWidth((e.nativeEvent.layout.width - PILL_INSET * 2 - 2) / count)}
+        onLayout={(e) => setSlotWidth((e.nativeEvent.layout.width - PILL_INSET * 2) / count)}
       >
         {/* The liquid pill, behind the icons. */}
         {slotWidth > 0 && count > 1 && (
@@ -123,7 +123,9 @@ export function LiquidPillBar({ slots, activeSlot }: Props) {
             pointerEvents="none"
             style={{
               position: 'absolute',
-              left: PILL_INSET,
+              // The bar's 1px border sits outside its padding box, so these
+              // put the pill 8px from the bar's outer edge on every side.
+              left: PILL_INSET - 1,
               top: PILL_INSET - 1,
               width: slotWidth,
               height: ACTIVE_HEIGHT,

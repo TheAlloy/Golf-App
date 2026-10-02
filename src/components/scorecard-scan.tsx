@@ -103,7 +103,7 @@ export default function ScorecardScan({ holes, pars, onScores, onPhoto }: Props)
             ))}
           </View>
           <Pressable
-            className="flex-row items-center justify-center gap-1.5 rounded-full bg-primary py-2.5 active:opacity-80"
+            className="flex-row items-center justify-center gap-2 rounded-full bg-primary py-3 active:opacity-80"
             onPress={() => onScores(status.scores)}
             accessibilityRole="button"
           >
@@ -150,7 +150,7 @@ function ScanButton({
   return (
     <Pressable
       className={cn(
-        'flex-row items-center gap-1.5 rounded-full border border-border bg-elevated px-3 py-1.5 active:opacity-80'
+        'flex-row items-center gap-2 rounded-full border border-border bg-elevated px-3 py-2 active:opacity-80'
       )}
       onPress={onPress}
       accessibilityRole="button"

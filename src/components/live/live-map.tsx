@@ -158,7 +158,7 @@ export default function LiveMap({ course, live, fix, wind, bottomSpace, topSpace
 
   /** Camera that puts a point at a given screen y, horizontally centred. */
   const cameraFor = useCallback((point: LatLng, zoom: number, y: number): Camera => {
-    const { width, height } = sizeRef.current;
+    const { height } = sizeRef.current;
     const p = project(point, zoom);
     return { center: unproject(p.x, p.y - (y - height / 2), zoom), zoom };
   }, []);
@@ -728,7 +728,7 @@ export default function LiveMap({ course, live, fix, wind, bottomSpace, topSpace
       <View pointerEvents="box-none" className="absolute inset-x-4" style={{ top: topSpace + 8 }}>
         <View className="flex-row items-start justify-between gap-2">
           <View
-            className="rounded-2xl px-3.5 py-2.5"
+            className="rounded-2xl px-4 py-3"
             style={{
               backgroundColor: GLOBE_COLORS.callout,
               borderWidth: 1,
@@ -750,7 +750,7 @@ export default function LiveMap({ course, live, fix, wind, bottomSpace, topSpace
                       : ' from the map centre'}
                 </Text>
                 {windRead && (
-                  <Text className="mt-0.5 text-xs text-primary-bright">Wind: {windRead}</Text>
+                  <Text className="mt-1 text-xs text-primary-bright">Wind: {windRead}</Text>
                 )}
               </>
             ) : (
@@ -764,7 +764,7 @@ export default function LiveMap({ course, live, fix, wind, bottomSpace, topSpace
               </>
             )}
             {lastShot !== null && lastShot > 5 && (
-              <Text className="mt-0.5 text-xs text-muted-foreground">
+              <Text className="mt-1 text-xs text-muted-foreground">
                 Last shot {formatDistance(lastShot, units)}
               </Text>
             )}
@@ -812,19 +812,19 @@ export default function LiveMap({ course, live, fix, wind, bottomSpace, topSpace
         style={{ bottom: bottomSpace }}
       >
         {note && (
-          <View className="self-center rounded-full bg-elevated px-3 py-1.5">
+          <View className="self-center rounded-full bg-elevated px-3 py-2">
             <Text className="text-xs text-foreground">{note}</Text>
           </View>
         )}
         {placingFlag && (
-          <View className="self-center rounded-full bg-primary px-3 py-1.5">
+          <View className="self-center rounded-full bg-primary px-3 py-2">
             <Text className="text-xs text-primary-foreground">
               Tap the green to place the flag for hole {hole}
             </Text>
           </View>
         )}
         {blocked && (
-          <View className="self-center rounded-full bg-elevated px-3 py-1.5">
+          <View className="self-center rounded-full bg-elevated px-3 py-2">
             <Text className="text-xs text-muted-foreground">Satellite tiles blocked here</Text>
           </View>
         )}

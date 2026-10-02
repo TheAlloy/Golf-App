@@ -53,7 +53,7 @@ export default function ScorecardEntry({ holes, pars, value, onChange }: Props) 
               </View>
               <View className="flex-row items-center gap-2">
                 {gir && (
-                  <View className="rounded-full bg-primary-bright/20 px-2 py-0.5">
+                  <View className="rounded-full bg-primary-bright/20 px-2 py-1">
                     <Text className="text-[10px] text-primary-bright">GIR</Text>
                   </View>
                 )}
@@ -163,7 +163,7 @@ function Toggle({
   return (
     <Pressable
       className={cn(
-        'flex-row items-center gap-1.5 rounded-full border px-3 py-1',
+        'flex-row items-center gap-2 rounded-full border px-3 py-1',
         active ? 'border-primary bg-primary' : 'border-border bg-transparent'
       )}
       onPress={onPress}

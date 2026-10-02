@@ -52,7 +52,7 @@ export default function ScorecardQuickEntry({ holes, pars, value, onChange }: Pr
                 const par = pars?.[index];
                 const over = strokes !== undefined && par !== undefined ? strokes - par : undefined;
                 return (
-                  <View key={index} className="flex-1 items-center gap-0.5">
+                  <View key={index} className="flex-1 items-center gap-1">
                     <Text className="text-[10px] text-muted-foreground">{index + 1}</Text>
                     <TextInput
                       ref={(el) => {
@@ -79,7 +79,7 @@ export default function ScorecardQuickEntry({ holes, pars, value, onChange }: Pr
                   </View>
                 );
               })}
-              <View className="w-9 items-center gap-0.5">
+              <View className="w-9 items-center gap-1">
                 <Text className="text-[10px] text-muted-foreground">{n === 0 ? 'Out' : 'In'}</Text>
                 <View className="h-10 w-full items-center justify-center">
                   <Text className="font-bold text-sm text-foreground">

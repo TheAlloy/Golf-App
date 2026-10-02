@@ -58,7 +58,7 @@ export function CourseCard({ course, played, completed, className }: Props) {
         </View>
       </View>
       {completed ? (
-        <View className="flex-row items-center gap-1 rounded-full bg-primary-bright/20 px-2.5 py-1">
+        <View className="flex-row items-center gap-1 rounded-full bg-primary-bright/20 px-3 py-1">
           <Ionicons name="checkmark" size={12} color={colors.primaryBright} />
           <Text className="font-semibold text-[11px] text-primary-bright">Ticked off</Text>
         </View>

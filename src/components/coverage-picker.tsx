@@ -73,7 +73,7 @@ export function CoveragePicker({
               }}
               accessibilityRole="menu"
             >
-              <Text className="px-3 pb-1 pt-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <Text className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-wide text-muted-foreground">
                 Shade where you&apos;ve played
               </Text>
               {COVERAGE_LEVELS.map((l) => {
@@ -82,7 +82,7 @@ export function CoveragePicker({
                   <Pressable
                     key={l.id}
                     className={cn(
-                      'flex-row items-center justify-between px-3 py-2.5 active:bg-muted',
+                      'flex-row items-center justify-between px-3 py-3 active:bg-muted',
                       selected && 'bg-muted/60'
                     )}
                     onPress={() => {
@@ -107,7 +107,7 @@ export function CoveragePicker({
                 );
               })}
               {note && (
-                <Text className="px-3 pb-1.5 pt-1 text-[10px] text-muted-foreground">{note}</Text>
+                <Text className="px-3 pb-2 pt-1 text-[10px] text-muted-foreground">{note}</Text>
               )}
             </View>
           )}

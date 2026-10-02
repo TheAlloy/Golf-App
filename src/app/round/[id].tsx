@@ -217,13 +217,13 @@ function Row({
 }) {
   return (
     <View className={cn('flex-row', header ? 'bg-elevated' : 'bg-transparent')}>
-      <View className="w-16 justify-center px-2 py-1.5">
+      <View className="w-16 justify-center px-2 py-2">
         <Text className="text-[10px] text-muted-foreground">{label}</Text>
       </View>
       {cells.map((c, i) => {
         const t = tone?.[i];
         return (
-          <View key={i} className="flex-1 items-center justify-center py-1.5">
+          <View key={i} className="flex-1 items-center justify-center py-2">
             <Text
               className={cn(
                 'text-[11px]',

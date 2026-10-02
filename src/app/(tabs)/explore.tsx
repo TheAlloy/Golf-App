@@ -76,7 +76,7 @@ export default function ExploreScreen() {
       {!query && (
         <View className="gap-2">
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-1.5">
+            <View className="flex-row items-center gap-2">
               <Ionicons name="heart" size={14} color={colors.destructive} />
               <Text className="font-semibold text-base">Your wishlist</Text>
             </View>
@@ -116,7 +116,7 @@ export default function ExploreScreen() {
               <Pressable
                 key={r.id}
                 className={cn(
-                  'rounded-full border px-4 py-1.5',
+                  'rounded-full border px-4 py-2',
                   region === r.id ? 'border-primary bg-primary' : 'border-border bg-card'
                 )}
                 onPress={() => setRegion(r.id)}

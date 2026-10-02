@@ -41,7 +41,7 @@ export default function CoverageScreen() {
                     {count.toLocaleString()}
                   </Text>
                 </View>
-                <View className="h-1.5 overflow-hidden rounded-full bg-elevated">
+                <View className="h-2 overflow-hidden rounded-full bg-elevated">
                   <View
                     className="h-full rounded-full bg-primary-bright"
                     style={{ width: `${Math.max(1, (count / max) * 100)}%` }}

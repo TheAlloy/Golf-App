@@ -239,7 +239,7 @@ export default function HomeScreen() {
         <View className="flex-row items-center justify-between">
           <Text className="font-bold text-2xl text-foreground">Global Play</Text>
           <Pressable
-            className="flex-row items-center gap-1.5 rounded-full bg-card/90 px-3 py-2 active:opacity-80"
+            className="flex-row items-center gap-2 rounded-full bg-card/90 px-3 py-2 active:opacity-80"
             onPress={() => setSummaryOpen(true)}
             accessibilityRole="button"
             accessibilityLabel={`${progression.total} points, level ${progression.level.number}. Show summary`}
@@ -271,7 +271,7 @@ export default function HomeScreen() {
                   <Pressable
                     key={v}
                     className={cn(
-                      'flex-row items-center gap-1.5 rounded-full px-4',
+                      'flex-row items-center gap-2 rounded-full px-4',
                       active ? 'bg-primary' : 'bg-transparent'
                     )}
                     onPress={() => setView(v)}
@@ -375,7 +375,7 @@ function PlayedCourseRow({ item, onPress }: { item: PlayedCourse; onPress: () =>
             {place}
           </Text>
         )}
-        <Text className="mt-0.5 text-[11px] text-muted-foreground">
+        <Text className="mt-1 text-[11px] text-muted-foreground">
           {rounds} round{rounds === 1 ? '' : 's'} · last {formatDate(lastPlayed)}
         </Text>
       </View>
@@ -395,7 +395,7 @@ function PlayedCourseRow({ item, onPress }: { item: PlayedCourse; onPress: () =>
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <View className="flex-row items-center gap-1.5">
+    <View className="flex-row items-center gap-2">
       <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
       <Text className="text-xs text-muted-foreground">{label}</Text>
     </View>
