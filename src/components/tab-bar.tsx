@@ -18,7 +18,7 @@ const PILL_INSET = 8;
 const ACTIVE_HEIGHT = TAB_BAR_HEIGHT - PILL_INSET * 2;
 
 /** Gap between the pill and the bottom of the screen. */
-function barOffset(bottomInset: number): number {
+export function barOffset(bottomInset: number): number {
   // Sit just above the home indicator, or a little off the edge without one.
   return Math.max(bottomInset - 8, 14);
 }

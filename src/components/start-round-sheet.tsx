@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { barOffset } from '@/components/tab-bar';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { nearestCatalogueCourses, NearbyCourse } from '@/data/course-catalogue';
@@ -96,15 +97,13 @@ export function StartRoundSheet({ visible, onClose }: Props) {
         onPress={close}
         accessibilityLabel="Close"
       >
-        {/* A floating card, 16px in from the sides and bottom (above the home indicator). */}
+        {/* A floating card, 16px in from the sides, its bottom level with the nav bar's. */}
         <Pressable
           className="gap-3 rounded-3xl border border-border bg-elevated p-4"
-          style={{ marginHorizontal: 16, marginBottom: insets.bottom + 16 }}
+          style={{ marginHorizontal: 16, marginBottom: barOffset(insets.bottom) }}
           onPress={() => {}}
           accessibilityViewIsModal
         >
-          <View className="mb-1 h-1 w-10 self-center rounded-full bg-muted" />
-
           {step.kind === 'choose' && (
             <>
               <Text className="font-bold text-lg text-foreground">New round</Text>
