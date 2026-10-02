@@ -108,4 +108,6 @@ export const NAV_COLORS = {
   iconActive: 'hsl(0, 0%, 98%)',
   // Disc behind the selected tab: the pill's green, deeper.
   active: '#032a1c',
+  // Dot on the club icon while a round is being recorded.
+  live: 'hsl(68, 92%, 60%)',
 };

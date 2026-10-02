@@ -71,6 +71,7 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
+        <Stack.Screen name="play" options={{ headerShown: false, title: 'Playing' }} />
         <Stack.Screen name="round/[id]" options={{ title: 'Round' }} />
       </Stack>
     </ThemeProvider>

@@ -4,7 +4,16 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { findCatalogueCourse } from '@/data/course-catalogue';
-import { Course, Friend, LatLng, Profile, Round, WishlistItem } from '@/models/types';
+import {
+  Course,
+  Friend,
+  LatLng,
+  LivePlayer,
+  LiveRound,
+  Profile,
+  Round,
+  WishlistItem,
+} from '@/models/types';
 
 export function makeId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -22,6 +31,13 @@ type AppState = {
   friends: Friend[];
   wishlist: WishlistItem[];
   profile: Profile;
+  /** The round being played right now, if any. */
+  liveRound: LiveRound | null;
+  /**
+   * Flag positions marked on earlier live rounds, by course id then hole, so
+   * a course only has to be marked up once.
+   */
+  courseFlags: Record<string, Record<number, LatLng>>;
 
   addCustomCourse: (input: {
     name: string;
@@ -37,7 +53,24 @@ type AppState = {
   removeFriend: (friendId: string) => void;
   toggleWishlist: (courseId: string) => void;
   updateProfile: (patch: Partial<Profile>) => void;
+
+  startLiveRound: (courseId: string, holes: 9 | 18) => LiveRound;
+  updateLiveRound: (patch: Partial<Omit<LiveRound, 'id' | 'courseId' | 'startedAt'>>) => void;
+  setLiveScore: (playerId: string, hole: number, strokes: number | undefined) => void;
+  addLivePlayer: (input: { name: string; friendId?: string }) => LivePlayer | null;
+  removeLivePlayer: (playerId: string) => void;
+  dropLivePin: (coordinate: LatLng) => void;
+  removeLivePin: (pinId: string) => void;
+  setLiveFlag: (hole: number, coordinate: LatLng | null) => void;
+  setLivePar: (hole: number, par: number) => void;
+  /** Save your card as a round and clear the live round. Returns the saved round. */
+  finishLiveRound: () => Round | null;
+  discardLiveRound: () => void;
 };
+
+/** How many can share a live card. */
+export const MAX_LIVE_PLAYERS = 4;
+const PLAYER_COLORS = ['hsl(158, 55%, 46%)', '#38BDF8', '#FBBF24', '#F472B6'];
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -47,6 +80,8 @@ export const useAppStore = create<AppState>()(
       friends: [],
       wishlist: [],
       profile: { name: 'Golfer' },
+      liveRound: null,
+      courseFlags: {},
 
       addCustomCourse: (input) => {
         const course: Course = {
@@ -108,15 +143,174 @@ export const useAppStore = create<AppState>()(
         })),
 
       updateProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
+
+      startLiveRound: (courseId, holes) => {
+        const me: LivePlayer = {
+          id: 'me',
+          name: get().profile.name || 'You',
+          color: PLAYER_COLORS[0],
+        };
+        const round: LiveRound = {
+          id: makeId('live'),
+          courseId,
+          startedAt: new Date().toISOString(),
+          holesPlayed: holes,
+          currentHole: 1,
+          players: [me],
+          scores: { me: [] },
+          pins: [],
+          flags: { ...(get().courseFlags[courseId] ?? {}) },
+          pars: {},
+          units: 'yd',
+        };
+        set({ liveRound: round });
+        return round;
+      },
+
+      updateLiveRound: (patch) =>
+        set((s) => (s.liveRound ? { liveRound: { ...s.liveRound, ...patch } } : {})),
+
+      setLiveScore: (playerId, hole, strokes) =>
+        set((s) => {
+          if (!s.liveRound) return {};
+          const row = [...(s.liveRound.scores[playerId] ?? [])];
+          row[hole - 1] = strokes;
+          return {
+            liveRound: { ...s.liveRound, scores: { ...s.liveRound.scores, [playerId]: row } },
+          };
+        }),
+
+      addLivePlayer: (input) => {
+        const live = get().liveRound;
+        if (!live || live.players.length >= MAX_LIVE_PLAYERS) return null;
+        const player: LivePlayer = {
+          id: makeId('player'),
+          name: input.name,
+          friendId: input.friendId,
+          color: PLAYER_COLORS[live.players.length % PLAYER_COLORS.length],
+        };
+        set({
+          liveRound: {
+            ...live,
+            players: [...live.players, player],
+            scores: { ...live.scores, [player.id]: [] },
+          },
+        });
+        return player;
+      },
+
+      removeLivePlayer: (playerId) =>
+        set((s) => {
+          if (!s.liveRound || playerId === 'me') return {};
+          const scores = { ...s.liveRound.scores };
+          delete scores[playerId];
+          return {
+            liveRound: {
+              ...s.liveRound,
+              players: s.liveRound.players.filter((p) => p.id !== playerId),
+              scores,
+            },
+          };
+        }),
+
+      dropLivePin: (coordinate) =>
+        set((s) =>
+          s.liveRound
+            ? {
+                liveRound: {
+                  ...s.liveRound,
+                  pins: [
+                    ...s.liveRound.pins,
+                    {
+                      id: makeId('pin'),
+                      hole: s.liveRound.currentHole,
+                      coordinate,
+                      at: new Date().toISOString(),
+                    },
+                  ],
+                },
+              }
+            : {}
+        ),
+
+      removeLivePin: (pinId) =>
+        set((s) =>
+          s.liveRound
+            ? {
+                liveRound: { ...s.liveRound, pins: s.liveRound.pins.filter((p) => p.id !== pinId) },
+              }
+            : {}
+        ),
+
+      setLiveFlag: (hole, coordinate) =>
+        set((s) => {
+          if (!s.liveRound) return {};
+          const flags = { ...s.liveRound.flags };
+          if (coordinate) flags[hole] = coordinate;
+          else delete flags[hole];
+          // Remember it for the course too, so next time the flags are already there.
+          const courseFlags = { ...s.courseFlags, [s.liveRound.courseId]: flags };
+          return { liveRound: { ...s.liveRound, flags }, courseFlags };
+        }),
+
+      setLivePar: (hole, par) =>
+        set((s) =>
+          s.liveRound
+            ? { liveRound: { ...s.liveRound, pars: { ...s.liveRound.pars, [hole]: par } } }
+            : {}
+        ),
+
+      finishLiveRound: () => {
+        const live = get().liveRound;
+        if (!live) return null;
+        const course =
+          get().customCourses.find((c) => c.id === live.courseId) ??
+          findCatalogueCourse(live.courseId);
+        const mine = live.scores.me ?? [];
+        const holeScores = Array.from({ length: live.holesPlayed }, (_, i) => ({
+          strokes: mine[i],
+        }));
+        const played = holeScores.filter((h) => h.strokes !== undefined);
+        const score = played.length
+          ? played.reduce((sum, h) => sum + (h.strokes ?? 0), 0)
+          : undefined;
+        // To par only means something against the holes actually scored.
+        let toPar: number | undefined;
+        if (score !== undefined && course) {
+          const pars = holeScores.map((h, i) =>
+            h.strokes === undefined
+              ? 0
+              : (course.holePars?.[i] ?? live.pars[i + 1] ?? course.par / course.holes)
+          );
+          toPar = Math.round(score - pars.reduce((a, b) => a + b, 0));
+        }
+        const round = get().addRound({
+          courseId: live.courseId,
+          date: live.startedAt.slice(0, 10),
+          holesPlayed: live.holesPlayed,
+          score,
+          toPar,
+          tags: ['live'],
+          playedWith: live.players.flatMap((p) => (p.friendId ? [p.friendId] : [])),
+          photos: [],
+          holeScores: played.length ? holeScores : undefined,
+        });
+        set({ liveRound: null });
+        return round;
+      },
+
+      discardLiveRound: () => set({ liveRound: null }),
     }),
     {
       name: 'golf-app-store',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
-        const state = persisted as Partial<AppState>;
+        let state = persisted as Partial<AppState>;
         // v3 added the wishlist; older stores simply start with an empty one.
-        if (version < 3) return { ...state, wishlist: [] } as AppState;
+        if (version < 3) state = { ...state, wishlist: [] };
+        // v4 added live rounds and remembered flag positions.
+        if (version < 4) state = { ...state, liveRound: null, courseFlags: {} };
         return state as AppState;
       },
     }
@@ -165,6 +359,9 @@ export function useIsWishlisted(courseId: string | undefined): boolean {
 export function usePlayerData() {
   const rounds = useAppStore((s) => s.rounds);
   const wishlist = useAppStore((s) => s.wishlist);
-  const courses = useCourses([...rounds.map((r) => r.courseId), ...wishlist.map((w) => w.courseId)]);
+  const courses = useCourses([
+    ...rounds.map((r) => r.courseId),
+    ...wishlist.map((w) => w.courseId),
+  ]);
   return { rounds, wishlist, courses };
 }

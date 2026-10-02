@@ -37,6 +37,34 @@ export const IMAGERY: ImagerySource = {
   attribution: process.env.EXPO_PUBLIC_IMAGERY_ATTRIBUTION ?? DEFAULT_SOURCE.attribution,
 };
 
+/**
+ * Imagery for the course map in a live round, which needs to resolve
+ * fairways and greens: zoom 17–19, a metre a pixel or better. Esri's World
+ * Imagery serves that free for non-commercial use with attribution; swap the
+ * env vars for Mapbox, MapTiler or Google in a commercial build.
+ */
+const DEFAULT_COURSE_SOURCE: ImagerySource = {
+  template:
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  maxZoom: 19,
+  tileSize: 256,
+  attribution: 'Esri, Maxar, Earthstar Geographics',
+};
+
+export const COURSE_IMAGERY: ImagerySource = {
+  template: process.env.EXPO_PUBLIC_COURSE_TILES || DEFAULT_COURSE_SOURCE.template,
+  maxZoom: envNumber(process.env.EXPO_PUBLIC_COURSE_MAX_ZOOM, DEFAULT_COURSE_SOURCE.maxZoom),
+  tileSize: envNumber(process.env.EXPO_PUBLIC_COURSE_TILE_SIZE, DEFAULT_COURSE_SOURCE.tileSize),
+  attribution: process.env.EXPO_PUBLIC_COURSE_ATTRIBUTION ?? DEFAULT_COURSE_SOURCE.attribution,
+};
+
+export function courseTileUrl(z: number, x: number, y: number): string {
+  return COURSE_IMAGERY.template
+    .replace('{z}', String(z))
+    .replace('{x}', String(x))
+    .replace('{y}', String(y));
+}
+
 /** Set EXPO_PUBLIC_IMAGERY_TILES=off to disable streaming and keep the bundled texture. */
 export const IMAGERY_ENABLED = IMAGERY.template.toLowerCase() !== 'off';
 

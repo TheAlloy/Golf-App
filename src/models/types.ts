@@ -4,12 +4,7 @@ export type LatLng = {
 };
 
 export type Continent =
-  | 'North America'
-  | 'South America'
-  | 'Europe'
-  | 'Africa'
-  | 'Asia'
-  | 'Australia';
+  'North America' | 'South America' | 'Europe' | 'Africa' | 'Asia' | 'Australia';
 
 export type Course = {
   id: string;
@@ -97,4 +92,46 @@ export type RoundStats = {
   greensInRegulation: number;
   girChances: number;
   putts: number;
+};
+
+/** Someone keeping score on the live card: you, a friend, or a name typed in. */
+export type LivePlayer = {
+  id: string;
+  name: string;
+  /** Set when the player is one of your friends, so the saved round can credit them. */
+  friendId?: string;
+  color: string;
+};
+
+/** A spot marked on the course during a live round: where you are, or where a shot was hit from. */
+export type ShotPin = {
+  id: string;
+  hole: number;
+  coordinate: LatLng;
+  /** ISO timestamp. */
+  at: string;
+};
+
+/**
+ * A round in progress. There is at most one; it lives in the store so the
+ * app can be left and reopened mid-round without losing the card.
+ */
+export type LiveRound = {
+  id: string;
+  courseId: string;
+  /** ISO timestamp. */
+  startedAt: string;
+  holesPlayed: 9 | 18;
+  /** 1-based hole being played. */
+  currentHole: number;
+  /** You first, then up to three others. */
+  players: LivePlayer[];
+  /** Strokes per hole for each player id. Index 0 is hole 1. */
+  scores: Record<string, (number | undefined)[]>;
+  pins: ShotPin[];
+  /** Where the flag is on each hole, as marked on the map. Keys are hole numbers. */
+  flags: Record<number, LatLng>;
+  /** Par set by hand for holes the catalogue has no par for. Keys are hole numbers. */
+  pars: Record<number, number>;
+  units: 'yd' | 'm';
 };

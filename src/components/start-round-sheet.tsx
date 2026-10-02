@@ -1,14 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { barOffset } from '@/components/tab-bar';
-import { Text } from '@/components/ui/text';
+import { barOffset } from '@/components/liquid-pill-bar';
+import { Text, withFontFamily } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
-import { nearestCatalogueCourses, NearbyCourse } from '@/data/course-catalogue';
+import {
+  findCatalogueCourse,
+  nearestCatalogueCourses,
+  NearbyCourse,
+  searchCatalogue,
+} from '@/data/course-catalogue';
+import { useAppStore } from '@/store/use-app-store';
 
 type Props = { visible: boolean; onClose: () => void };
 
@@ -39,23 +45,41 @@ type Step =
   | { kind: 'found'; nearby: NearbyCourse[] }
   | { kind: 'none' }
   | { kind: 'denied' }
-  | { kind: 'failed' };
+  | { kind: 'failed' }
+  | { kind: 'pick' };
 
 /**
  * The sheet behind the nav bar's +. Two ways in: start a round at the course
- * you're standing on (found by GPS), or add one you've already played.
- * Starting live hands the chosen course to the round logger; the live
- * tracker screen will take over from there once it exists.
+ * you're standing on (found by GPS, or searched for), which opens the live
+ * round screen; or add one you've already played, which opens the logger.
  */
 export function StartRoundSheet({ visible, onClose }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>({ kind: 'choose' });
+  const [query, setQuery] = useState('');
+  const customCourses = useAppStore((s) => s.customCourses);
+  const startLiveRound = useAppStore((s) => s.startLiveRound);
 
   // Closing resets, so every opening starts from the two choices.
   const close = () => {
     onClose();
     setStep({ kind: 'choose' });
+    setQuery('');
+  };
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const mine = customCourses.filter((c) => `${c.name} ${c.city}`.toLowerCase().includes(q));
+    return [...mine, ...searchCatalogue(query, 8)].slice(0, 8);
+  }, [query, customCourses]);
+
+  const startLive = (courseId: string) => {
+    const course = customCourses.find((c) => c.id === courseId) ?? findCatalogueCourse(courseId);
+    startLiveRound(courseId, (course?.holes ?? 18) >= 18 ? 18 : 9);
+    close();
+    router.push('/play');
   };
 
   const locate = async () => {
@@ -85,9 +109,9 @@ export function StartRoundSheet({ visible, onClose }: Props) {
     }
   };
 
-  const openLogger = (courseId?: string) => {
+  const openLogger = () => {
     close();
-    router.push(courseId ? { pathname: '/log-round', params: { courseId } } : '/log-round');
+    router.push('/log-round');
   };
 
   return (
@@ -143,7 +167,7 @@ export function StartRoundSheet({ visible, onClose }: Props) {
                       ? 'flex-row items-center gap-3 rounded-2xl bg-primary p-4 active:opacity-80'
                       : 'flex-row items-center gap-3 rounded-2xl bg-card p-4 active:opacity-80'
                   }
-                  onPress={() => openLogger(course.id)}
+                  onPress={() => startLive(course.id)}
                   accessibilityRole="button"
                 >
                   <Ionicons
@@ -182,7 +206,7 @@ export function StartRoundSheet({ visible, onClose }: Props) {
                   />
                 </Pressable>
               ))}
-              <Pressable className="items-center py-2" onPress={() => openLogger()}>
+              <Pressable className="items-center py-2" onPress={() => setStep({ kind: 'pick' })}>
                 <Text className="text-sm text-primary-bright">Not here? Pick another course</Text>
               </Pressable>
             </>
@@ -204,9 +228,58 @@ export function StartRoundSheet({ visible, onClose }: Props) {
                 icon="search-outline"
                 title="Pick a course"
                 body="Search the catalogue and start from there."
-                onPress={() => openLogger()}
+                onPress={() => setStep({ kind: 'pick' })}
                 primary
               />
+            </>
+          )}
+
+          {step.kind === 'pick' && (
+            <>
+              <Text className="font-bold text-lg text-foreground">Where are you playing?</Text>
+              <TextInput
+                className={withFontFamily(
+                  'h-12 rounded-xl border border-input bg-background px-4 text-base text-foreground'
+                )}
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search courses…"
+                placeholderTextColor={colors.mutedForeground}
+                autoFocus
+                autoCorrect={false}
+                accessibilityLabel="Search courses"
+              />
+              {matches.length > 0 && (
+                <ScrollView
+                  className="max-h-64"
+                  keyboardShouldPersistTaps="handled"
+                  indicatorStyle="white"
+                >
+                  {matches.map((course) => (
+                    <Pressable
+                      key={course.id}
+                      className="flex-row items-center gap-3 border-border border-b py-3 active:opacity-70"
+                      onPress={() => startLive(course.id)}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="golf-outline" size={18} color={colors.mutedForeground} />
+                      <View className="flex-1">
+                        <Text className="font-semibold text-sm" numberOfLines={1}>
+                          {course.name}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                          {[course.city, course.country].filter(Boolean).join(', ')} · Par{' '}
+                          {course.par}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+              {query.trim().length > 0 && matches.length === 0 && (
+                <Text className="text-sm text-muted-foreground">No courses match that.</Text>
+              )}
             </>
           )}
         </Pressable>
