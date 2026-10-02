@@ -28,7 +28,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Golf App to attach photos from your library to logged rounds."
+          "photosPermission": "Allow Golf App to attach photos from your library to logged rounds.",
+          "cameraPermission": "Allow Golf App to photograph your scorecard so the scores can be read off it."
         }
       ],
       [

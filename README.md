@@ -51,6 +51,17 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 - **Supabase** (planned): schema and row-level security in
   [`supabase/migrations`](supabase/migrations)
 
+### Scanning a scorecard
+
+In the round logger's hole-by-hole mode you can photograph your card (or pick
+a photo). On web the numbers are read off it with Tesseract, which fetches its
+worker and English model from tesseract.js's CDN on first use, and offered
+for you to check before they fill the grid. On iOS and Android in Expo Go
+there is no on-device text recognition, so the photo is kept with the round
+as a reference and you type the scores in the quick grid; wiring in ML Kit
+needs a development build. Scores can always be typed hole by hole, nine at
+a time, with Out/In subtotals.
+
 ## Course data
 
 The bundled catalogue is US-complete but thin elsewhere, because no open

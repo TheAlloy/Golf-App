@@ -6,6 +6,8 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import ScorecardEntry from '@/components/scorecard-entry';
+import ScorecardQuickEntry from '@/components/scorecard-quick-entry';
+import ScorecardScan from '@/components/scorecard-scan';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
@@ -234,9 +236,29 @@ export default function LogRoundScreen() {
           </>
         ) : (
           <>
+            <ScorecardScan
+              holes={holesPlayed}
+              pars={selectedCourse?.holePars}
+              onScores={(strokes) =>
+                setHoleScores((prev) =>
+                  Array.from({ length: holesPlayed }, (_, i) => ({
+                    ...prev[i],
+                    strokes: strokes[i],
+                  }))
+                )
+              }
+              onPhoto={(uri) => setPhotos((p) => (p.includes(uri) ? p : [...p, uri]))}
+            />
+            <Text className="mt-1 font-semibold text-sm">Scores</Text>
+            <ScorecardQuickEntry
+              holes={holesPlayed}
+              pars={selectedCourse?.holePars}
+              value={holeScores}
+              onChange={setHoleScores}
+            />
             <View className="flex-row items-center justify-between rounded-lg bg-card p-3">
               <Text className="text-sm text-muted-foreground">
-                {cardTotal !== undefined ? 'Card total' : 'Tap through the holes below'}
+                {cardTotal !== undefined ? 'Card total' : 'Type or scan your scores above'}
               </Text>
               {cardTotal !== undefined && (
                 <Text className="font-bold text-lg text-primary-bright">{cardTotal}</Text>
@@ -251,6 +273,7 @@ export default function LogRoundScreen() {
                 </Text>
               </View>
             )}
+            <Text className="mt-1 font-semibold text-sm">Putts and fairways</Text>
             <ScorecardEntry
               holes={holesPlayed}
               pars={selectedCourse?.holePars}
