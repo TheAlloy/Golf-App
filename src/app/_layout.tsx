@@ -44,6 +44,11 @@ export default function RootLayout() {
           // Every page change is a cross-fade. The JS stack is used because
           // it animates on the web too; the native one only does on devices.
           animation: 'fade',
+          // On the web the stack otherwise lets a page grow to its content and
+          // leaves scrolling to the document, which Expo's root styles block.
+          // A floating header keeps each page the size of the screen, so its
+          // own ScrollView scrolls and the header stays put.
+          headerMode: 'float',
           headerLeft: () => <HeaderBack />,
         }}
       >
