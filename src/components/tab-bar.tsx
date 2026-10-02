@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { StartRoundSheet } from '@/components/start-round-sheet';
 import { NAV_COLORS } from '@/constants/theme';
 
 /** Height of the floating pill. */
@@ -41,8 +42,8 @@ const TABS: Record<string, { label: string; icon: IconName }> = {
  * that opens the round logger rather than being a tab of its own.
  */
 export default function TabBar({ state, navigation }: BottomTabBarProps) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [startOpen, setStartOpen] = useState(false);
 
   const renderTab = (index: number) => {
     const route = state.routes[index];
@@ -104,12 +105,12 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
       >
         {renderTab(0)}
         {renderTab(1)}
-        {/* Log a round: styled like a tab, but it opens the logger. */}
+        {/* Start or log a round: styled like a tab, but it opens a sheet. */}
         <Pressable
           className="flex-1 items-center justify-center active:opacity-70"
-          onPress={() => router.push('/log-round')}
+          onPress={() => setStartOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel="Log a round"
+          accessibilityLabel="New round"
           hitSlop={4}
         >
           <Ionicons name="add-circle-outline" size={25} color={NAV_COLORS.icon} />
@@ -117,6 +118,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
         {renderTab(2)}
         {renderTab(3)}
       </View>
+      <StartRoundSheet visible={startOpen} onClose={() => setStartOpen(false)} />
     </View>
   );
 }

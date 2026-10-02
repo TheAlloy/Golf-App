@@ -14,8 +14,18 @@ import { Continent, Course } from '@/models/types';
 
 // [id, name, lat, lng, city, region, country, continent, holes, par, type, holeParDigits]
 type Row = [
-  string, string, number, number, string, string,
-  string, string, number, number, string, string,
+  string,
+  string,
+  number,
+  number,
+  string,
+  string,
+  string,
+  string,
+  number,
+  number,
+  string,
+  string,
 ];
 
 const ROWS = COURSE_ROWS as Row[];
@@ -34,7 +44,20 @@ function parseHolePars(digits: string, holes: number): (number | undefined)[] | 
 }
 
 function hydrate(row: Row): Course {
-  const [id, name, latitude, longitude, city, region, country, continent, holes, par, type, parDigits] = row;
+  const [
+    id,
+    name,
+    latitude,
+    longitude,
+    city,
+    region,
+    country,
+    continent,
+    holes,
+    par,
+    type,
+    parDigits,
+  ] = row;
   return {
     id,
     name,
@@ -130,13 +153,7 @@ export function catalogueByCountry(): { country: string; count: number }[] {
 
 /** Regions the Explore tab can browse. */
 export type ExploreRegion =
-  | 'featured'
-  | 'uk-ireland'
-  | 'europe'
-  | 'usa'
-  | 'asia-pacific'
-  | 'americas'
-  | 'africa';
+  'featured' | 'uk-ireland' | 'europe' | 'usa' | 'asia-pacific' | 'americas' | 'africa';
 
 export const EXPLORE_REGIONS: { id: ExploreRegion; label: string }[] = [
   { id: 'featured', label: 'Bucket list' },
@@ -197,4 +214,40 @@ export function browseCatalogue(region: ExploreRegion, limit = 40): Course[] {
 export function regionCount(region: ExploreRegion): number {
   browseCatalogue(region, 0);
   return regionCache.get(region)!.length;
+}
+
+/** Great-circle distance in kilometres. */
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toRad;
+  const dLon = (lon2 - lon1) * toRad;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export type NearbyCourse = { course: Course; distanceKm: number };
+
+/**
+ * The closest catalogue courses to a position, nearest first. Scans every row
+ * with a cheap latitude cut before the full distance, which keeps it to a few
+ * milliseconds for the whole catalogue.
+ */
+export function nearestCatalogueCourses(
+  latitude: number,
+  longitude: number,
+  limit = 5,
+  withinKm = 25
+): NearbyCourse[] {
+  const latSpan = withinKm / 111;
+  const hits: { i: number; d: number }[] = [];
+  for (let i = 0; i < ROWS.length; i++) {
+    const row = ROWS[i];
+    if (Math.abs(row[2] - latitude) > latSpan) continue;
+    const d = distanceKm(latitude, longitude, row[2], row[3]);
+    if (d <= withinKm) hits.push({ i, d });
+  }
+  hits.sort((a, b) => a.d - b.d);
+  return hits.slice(0, limit).map(({ i, d }) => ({ course: hydrate(ROWS[i]), distanceKm: d }));
 }
