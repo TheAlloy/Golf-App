@@ -46,11 +46,10 @@ export default function LogRoundScreen() {
 
   const selectedCourse = useCourse(courseId);
   const courseMatches = useMemo(() => {
-    if (selectedCourse) return [];
+    // Nothing is suggested until you type; the list is a search, not a feed.
     const q = courseQuery.trim().toLowerCase();
-    const mine = q
-      ? customCourses.filter((c) => `${c.name} ${c.city}`.toLowerCase().includes(q))
-      : customCourses;
+    if (selectedCourse || !q) return [];
+    const mine = customCourses.filter((c) => `${c.name} ${c.city}`.toLowerCase().includes(q));
     return [...mine, ...searchCatalogue(courseQuery, 10)].slice(0, 12);
   }, [courseQuery, customCourses, selectedCourse]);
 
