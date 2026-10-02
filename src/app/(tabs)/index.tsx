@@ -46,6 +46,17 @@ function formatDate(iso: string): string {
       });
 }
 
+/** Callout line under a played course: what you shot there, and how often you've been. */
+function playedDetail(count: number, best: Round | undefined): string {
+  const visits = `${count} round${count === 1 ? '' : 's'}`;
+  if (best?.score === undefined) return `Played · ${visits}`;
+  const toPar =
+    best.toPar === undefined
+      ? ''
+      : ` (${best.toPar > 0 ? '+' : ''}${best.toPar === 0 ? 'E' : best.toPar})`;
+  return `${count > 1 ? 'Best' : 'Shot'} ${best.score}${toPar} · ${visits}`;
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -109,13 +120,13 @@ export default function HomeScreen() {
 
   const markers: GlobeMarker[] = useMemo(
     () => [
-      ...playedCourses.map(({ course, rounds: count }) => ({
+      ...playedCourses.map(({ course, rounds: count, best }) => ({
         id: course.id,
         latitude: course.coordinate.latitude,
         longitude: course.coordinate.longitude,
         label: course.name,
         kind: 'played' as const,
-        detail: `Played · ${count} round${count === 1 ? '' : 's'}`,
+        detail: playedDetail(count, best),
       })),
       ...wishedCourses.map((course) => ({
         id: course.id,
@@ -210,7 +221,7 @@ export default function HomeScreen() {
             <View className="items-center gap-2 py-16">
               <Ionicons name="flag-outline" size={28} color={colors.mutedForeground} />
               <Text className="text-center text-sm text-muted-foreground">
-                Courses you play show up here. Open a course in Explore to log your first round.
+                Courses you play show up here. Tap + to log your first round.
               </Text>
             </View>
           }
