@@ -96,9 +96,10 @@ export function StartRoundSheet({ visible, onClose }: Props) {
         onPress={close}
         accessibilityLabel="Close"
       >
+        {/* A floating card, 16px in from the sides and bottom (above the home indicator). */}
         <Pressable
-          className="gap-3 rounded-t-3xl border border-border bg-elevated px-5 pt-4"
-          style={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
+          className="gap-3 rounded-3xl border border-border bg-elevated p-4"
+          style={{ marginHorizontal: 16, marginBottom: insets.bottom + 16 }}
           onPress={() => {}}
           accessibilityViewIsModal
         >
