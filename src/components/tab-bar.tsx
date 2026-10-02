@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StartRoundSheet } from '@/components/start-round-sheet';
@@ -16,6 +16,12 @@ export const TAB_BAR_HEIGHT = 64;
  */
 const PILL_INSET = 8;
 const ACTIVE_HEIGHT = TAB_BAR_HEIGHT - PILL_INSET * 2;
+/** Slots across the bar: four tabs and the + in the middle. */
+const SLOTS = 5;
+/** Which slot each tab index sits in (the + takes slot 2). */
+const TAB_SLOT = [0, 1, 3, 4];
+/** How far the pill stretches while in flight, as a multiple of its width. */
+const STRETCH = 1.35;
 
 /** Gap between the pill and the bottom of the screen. */
 export function barOffset(bottomInset: number): number {
@@ -45,6 +51,49 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const [startOpen, setStartOpen] = useState(false);
 
+  // The selected-tab pill is one element that glides between slots, stretching
+  // as it goes and settling back, so a tab change reads as a drop of liquid
+  // moving rather than a swap.
+  const [slotWidth, setSlotWidth] = useState(0);
+  const [slot] = useState(() => new Animated.Value(TAB_SLOT[state.index] ?? 0));
+  const [stretch] = useState(() => new Animated.Value(1));
+  const reduceMotion = useRef(false);
+  useEffect(() => {
+    let live = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((on) => live && (reduceMotion.current = on))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    const target = TAB_SLOT[state.index] ?? 0;
+    if (reduceMotion.current) {
+      slot.setValue(target);
+      return;
+    }
+    stretch.stopAnimation();
+    Animated.parallel([
+      Animated.spring(slot, {
+        toValue: target,
+        stiffness: 170,
+        damping: 18,
+        mass: 0.9,
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(stretch, { toValue: STRETCH, duration: 110, useNativeDriver: true }),
+        Animated.spring(stretch, {
+          toValue: 1,
+          stiffness: 220,
+          damping: 16,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [state.index, slot, stretch]);
+
   const renderTab = (index: number) => {
     const route = state.routes[index];
     const tab = route && TABS[route.name];
@@ -70,11 +119,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
       >
         <View
           className="items-center justify-center self-stretch"
-          style={{
-            height: ACTIVE_HEIGHT,
-            borderRadius: ACTIVE_HEIGHT / 2,
-            backgroundColor: focused ? NAV_COLORS.active : 'transparent',
-          }}
+          style={{ height: ACTIVE_HEIGHT }}
         >
           <Ionicons
             name={tab.icon}
@@ -102,7 +147,32 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
           borderColor: NAV_COLORS.pillEdge,
           boxShadow: '0 14px 32px rgba(0, 0, 0, 0.55)',
         }}
+        onLayout={(e) => setSlotWidth((e.nativeEvent.layout.width - PILL_INSET * 2 - 2) / SLOTS)}
       >
+        {/* The liquid pill, behind the icons. */}
+        {slotWidth > 0 && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: PILL_INSET,
+              top: PILL_INSET - 1,
+              width: slotWidth,
+              height: ACTIVE_HEIGHT,
+              borderRadius: ACTIVE_HEIGHT / 2,
+              backgroundColor: NAV_COLORS.active,
+              transform: [
+                {
+                  translateX: slot.interpolate({
+                    inputRange: [0, SLOTS - 1],
+                    outputRange: [0, slotWidth * (SLOTS - 1)],
+                  }),
+                },
+                { scaleX: stretch },
+              ],
+            }}
+          />
+        )}
         {renderTab(0)}
         {renderTab(1)}
         {/* Start or log a round: styled like a tab, but it opens a sheet. */}
