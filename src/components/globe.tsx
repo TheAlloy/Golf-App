@@ -762,14 +762,21 @@ export default function Globe({
 
 /** Height of a flag pole, from the course's spot on the ground. */
 const POLE = 18;
-const CALLOUT_H = 30;
-const CALLOUT_MAX_W = 160;
+const CALLOUT_H = 44;
+const CALLOUT_MAX_W = 224;
+const CALLOUT_NAME_SIZE = 12;
+const CALLOUT_DETAIL_SIZE = 10;
 
 /** Callout geometry, sized from the text since SVG text can't be measured. */
 function calloutFor(name: string, detail: string, cx: number, cy: number) {
   const label = name.length > 30 ? `${name.slice(0, 29)}…` : name;
-  const w = Math.min(CALLOUT_MAX_W, Math.max(label.length * 5.1, detail.length * 4.3) + 18);
-  return { x: cx - w / 2, y: cy - POLE - 6 - CALLOUT_H, w, h: CALLOUT_H, label };
+  // Manrope runs about 0.56em per character at these weights.
+  const w = Math.min(
+    CALLOUT_MAX_W,
+    Math.max(label.length * CALLOUT_NAME_SIZE * 0.56, detail.length * CALLOUT_DETAIL_SIZE * 0.56) +
+      24
+  );
+  return { x: cx - w / 2, y: cy - POLE - 8 - CALLOUT_H, w, h: CALLOUT_H, label };
 }
 
 /** A golf flag planted at (cx, cy): shadow, pole and pennant. */
@@ -821,16 +828,16 @@ function Callout({
         y={y}
         width={w}
         height={h}
-        rx={7}
+        rx={12}
         fill={GLOBE_COLORS.callout}
         stroke={GLOBE_COLORS.calloutEdge}
         strokeWidth={1}
       />
       <SvgText
         x={x + w / 2}
-        y={y + 12.5}
+        y={y + 18}
         fill={GLOBE_COLORS.pinLabel}
-        fontSize={9}
+        fontSize={CALLOUT_NAME_SIZE}
         fontFamily="Manrope_600SemiBold"
         fontWeight="600"
         textAnchor="middle"
@@ -839,9 +846,9 @@ function Callout({
       </SvgText>
       <SvgText
         x={x + w / 2}
-        y={y + 23.5}
+        y={y + 33}
         fill={color}
-        fontSize={7.5}
+        fontSize={CALLOUT_DETAIL_SIZE}
         fontFamily="Manrope_600SemiBold"
         fontWeight="600"
         textAnchor="middle"
