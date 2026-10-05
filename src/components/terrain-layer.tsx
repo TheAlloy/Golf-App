@@ -9,11 +9,12 @@ import {
   wantedCells,
   covers,
   IMAGERY,
-  IMAGERY_ENABLED,
+  ImagerySource,
+  TERRAIN_IMAGERY,
   LonLatBounds,
   planAtlas,
   TileRect,
-  tileUrl,
+  tileUrlFrom,
 } from '@/lib/imagery';
 import { loadTile, TilePixels } from '@/lib/tile-loader';
 
@@ -40,6 +41,8 @@ type Props = {
    * it then neither redraws nor fetches tiles, and catches up when shown.
    */
   active?: boolean;
+  /** Satellite imagery, or a shaded-relief terrain map. */
+  look?: 'satellite' | 'terrain';
 };
 
 /**
@@ -75,6 +78,9 @@ uniform sampler2D u_mask;
 // Atlas window: tile x0, tile y0, tiles across the world at this zoom, tiles across the atlas.
 uniform vec4 u_rect;
 uniform float u_useTiles;
+// 1 for the terrain look: the satellite base is muted and lifted towards a
+// pale relief map, standing in until terrain tiles arrive.
+uniform float u_style;
 const float PI = 3.141592653589793;
 const float MERCATOR_LIMIT = 1.4844222297;
 
@@ -98,6 +104,10 @@ void main() {
   float u = fract((lon + PI) / (2.0 * PI));
 
   vec3 color = texture2D(u_tex, vec2(u, (PI * 0.5 - lat) / PI)).rgb;
+  if (u_style > 0.5) {
+    float luma = dot(color, vec3(0.299, 0.587, 0.114));
+    color = mix(vec3(luma), color, 0.45) * 0.62 + 0.3;
+  }
 
   if (u_useTiles > 0.5 && abs(lat) < MERCATOR_LIMIT) {
     float n = u_rect.z;
@@ -133,6 +143,7 @@ type Scene = {
   uCentreGeo: WebGLUniformLocation | null;
   uRect: WebGLUniformLocation | null;
   uUseTiles: WebGLUniformLocation | null;
+  uStyle: WebGLUniformLocation | null;
 };
 
 /** Which tiles the atlas currently holds, and which cells have landed. */
@@ -252,7 +263,10 @@ export default function TerrainLayer({
   rotation,
   onStatus,
   active = true,
+  look = 'satellite',
 }: Props) {
+  const source: ImagerySource = look === 'terrain' ? TERRAIN_IMAGERY : IMAGERY;
+  const enabled = source.template.toLowerCase() !== 'off';
   const scene = useRef<Scene | null>(null);
   const status = useRef<ImageryStatus>('idle');
   const landed = useRef(0);
@@ -377,6 +391,7 @@ export default function TerrainLayer({
       uCentreGeo: gl.getUniformLocation(program, 'u_centreGeo'),
       uRect: gl.getUniformLocation(program, 'u_rect'),
       uUseTiles: gl.getUniformLocation(program, 'u_useTiles'),
+      uStyle: gl.getUniformLocation(program, 'u_style'),
     };
     setReady(true);
   }, []);
@@ -423,7 +438,7 @@ export default function TerrainLayer({
       if (!job || !a || job.generation !== a.generation) continue;
       const x = a.rect.x0 + job.i;
       const y = a.rect.y0 + job.j;
-      const url = tileUrl(a.rect.z, x, y);
+      const url = tileUrlFrom(source, a.rect.z, x, y);
       if (failed.has(url)) continue;
       const cached = cacheGet(url);
       if (cached) {
@@ -455,13 +470,22 @@ export default function TerrainLayer({
         });
     }
     redraw.current();
-  }, [placeTile, setStatus]);
+  }, [placeTile, setStatus, source]);
 
   useEffect(() => {
     pumpRef.current = pump;
   }, [pump]);
 
   useEffect(() => () => clearTimeout(settle.current), []);
+
+  // A new source means a new atlas: forget what was loaded and start again.
+  useEffect(() => {
+    atlas.current = null;
+    queue.current = [];
+    failures.current = 0;
+    landed.current = 0;
+    setStatus('idle');
+  }, [source, setStatus]);
 
   /** Point the atlas at a new window of tiles and start filling it. */
   /** Queue any wanted cells that are neither loaded nor already requested. */
@@ -526,9 +550,9 @@ export default function TerrainLayer({
     // Decide which tiles this view wants, and refill the atlas if it has moved
     // on from what's loaded.
     let useTiles = false;
-    if (IMAGERY_ENABLED) {
+    if (enabled) {
       const bounds = visibleBounds(width, height, cx, cy, radius, rotation);
-      const plan = bounds ? planAtlas(bounds, radius * k, IMAGERY) : null;
+      const plan = bounds ? planAtlas(bounds, radius * k, source) : null;
       if (!plan) {
         if (status.current !== 'unavailable') setStatus('idle');
       } else {
@@ -562,13 +586,29 @@ export default function TerrainLayer({
       const toRad = Math.PI / 180;
       gl.uniform2f(s.uCentreGeo, -rotation[0] * toRad, -rotation[1] * toRad);
       gl.uniform1f(s.uUseTiles, useTiles && a ? 1 : 0);
+      gl.uniform1f(s.uStyle, look === 'terrain' ? 1 : 0);
       if (a) gl.uniform4f(s.uRect, a.rect.x0, a.rect.y0, 2 ** a.rect.z, ATLAS_TILES);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       gl.endFrameEXP();
     };
     redraw.current = draw;
     draw();
-  }, [ready, active, width, height, cx, cy, radius, rotation, refill, ensure, setStatus]);
+  }, [
+    ready,
+    active,
+    look,
+    source,
+    enabled,
+    width,
+    height,
+    cx,
+    cy,
+    radius,
+    rotation,
+    refill,
+    ensure,
+    setStatus,
+  ]);
 
   return (
     <GLView

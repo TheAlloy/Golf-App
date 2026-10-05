@@ -25,10 +25,12 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 - **Globe** (Home) — an orthographic world globe (d3-geo + SVG) that
   starts dark and marks every course you have played in green and every
   wishlisted one in lime yellow. A thumbnail in the top right switches to a
-  terrain view: NASA Blue Marble satellite imagery wrapped onto the sphere by a
+  satellite view: NASA Blue Marble satellite imagery wrapped onto the sphere by a
   GPU shader (expo-gl), with country borders and pins drawn over it. The
-  layers button fans out Map and Terrain, and on the map two "where I've
-  played" shadings, US states or countries, coloured by continent. Drag to spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
+  layers button fans out three looks: Map, Satellite (Blue Marble imagery,
+  sharpened by streamed tiles) and Terrain (a shaded-relief map). On the map
+  a filter button shades where you've played by US state or country,
+  coloured by continent. Drag to spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
 - **Real course data** — 15,667 US courses from the
   [OpenGolfAPI](https://github.com/opengolfapi/data) open dataset, including
   hole-by-hole par and stroke index, plus 60 curated international courses.
@@ -122,7 +124,7 @@ grid so distances still read.
 
 ### Satellite imagery
 
-The terrain view wraps a bundled whole-earth texture onto the globe, then
+The satellite view wraps a bundled whole-earth texture onto the globe, then
 sharpens it with streamed Web Mercator tiles as you zoom in. Out of the box it
 streams EOX's Sentinel-2 cloudless mosaic (free with attribution, no key,
 ~10 m per pixel). For sharper imagery point it at another provider with
@@ -134,6 +136,12 @@ streams EOX's Sentinel-2 cloudless mosaic (free with attribution, no key,
 | Esri World Imagery | `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` | 19 | Free for non-commercial use with attribution; production needs an ArcGIS key |
 | Mapbox Satellite | `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=…` | 22 | Set tile size 512 |
 | MapTiler Satellite | `https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=…` | 20 | |
+
+The terrain view streams a shaded-relief map instead, Esri's World Terrain
+Base by default (zoom to 13, free for non-commercial use), configured with
+`EXPO_PUBLIC_TERRAIN_TILES`, `_MAX_ZOOM` and `_ATTRIBUTION`; it must use the
+same tile size as the satellite source. Until its tiles arrive the satellite
+texture is muted and lifted to a pale relief look.
 
 Set `EXPO_PUBLIC_IMAGERY_MAX_ZOOM`, `EXPO_PUBLIC_IMAGERY_TILE_SIZE` (256 or
 512) and `EXPO_PUBLIC_IMAGERY_ATTRIBUTION` to match, and show the provider's
@@ -176,7 +184,7 @@ US state and county outlines from [us-atlas](https://github.com/topojson/us-atla
 (US Census Bureau, public domain); the country-to-continent table in
 `src/data/country-continents.json` is derived from
 [world-countries](https://github.com/mledoze/countries) (ODbL).
-The terrain view uses NASA's
+The satellite view uses NASA's
 [Blue Marble](https://visibleearth.nasa.gov/collection/1484/blue-marble) imagery
 (public domain), bundled as `assets/earth/blue-marble.jpg`. Streamed tiles are
 [Sentinel-2 cloudless](https://s2maps.eu) by [EOX IT Services GmbH](https://eox.at)

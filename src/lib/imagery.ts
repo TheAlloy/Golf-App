@@ -68,11 +68,38 @@ export function courseTileUrl(z: number, x: number, y: number): string {
 /** Set EXPO_PUBLIC_IMAGERY_TILES=off to disable streaming and keep the bundled texture. */
 export const IMAGERY_ENABLED = IMAGERY.template.toLowerCase() !== 'off';
 
-export function tileUrl(z: number, x: number, y: number): string {
-  return IMAGERY.template
+/**
+ * The terrain look: shaded relief with hypsometric tints and no labels, in
+ * the manner of a topographic map. Esri's World Terrain Base is free for
+ * non-commercial use with attribution. Must share the satellite source's
+ * tile size, since both stream into the same atlas.
+ */
+const DEFAULT_TERRAIN_SOURCE: ImagerySource = {
+  template:
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}',
+  maxZoom: 13,
+  tileSize: 256,
+  attribution: 'Esri, USGS, NOAA',
+};
+
+export const TERRAIN_IMAGERY: ImagerySource = {
+  template: process.env.EXPO_PUBLIC_TERRAIN_TILES || DEFAULT_TERRAIN_SOURCE.template,
+  maxZoom: envNumber(process.env.EXPO_PUBLIC_TERRAIN_MAX_ZOOM, DEFAULT_TERRAIN_SOURCE.maxZoom),
+  tileSize: IMAGERY.tileSize,
+  attribution: process.env.EXPO_PUBLIC_TERRAIN_ATTRIBUTION ?? DEFAULT_TERRAIN_SOURCE.attribution,
+};
+
+export const TERRAIN_ENABLED = TERRAIN_IMAGERY.template.toLowerCase() !== 'off';
+
+export function tileUrlFrom(source: ImagerySource, z: number, x: number, y: number): string {
+  return source.template
     .replace('{z}', String(z))
     .replace('{x}', String(x))
     .replace('{y}', String(y));
+}
+
+export function tileUrl(z: number, x: number, y: number): string {
+  return tileUrlFrom(IMAGERY, z, x, y);
 }
 
 /** Tiles on each side of the atlas texture; the atlas is a contiguous window of the tile grid. */

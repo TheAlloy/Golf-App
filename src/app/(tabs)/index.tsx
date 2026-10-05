@@ -19,14 +19,21 @@ import {
   MapAppearance,
 } from '@/components/appearance-button';
 import { ProgressSummary } from '@/components/progress-summary';
+import { CoveragePicker } from '@/components/coverage-picker';
 import { useLiquidSlot } from '@/components/liquid-pill-bar';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
-import { colors, continentShade, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
+import {
+  colors,
+  continentShade,
+  GLOBE_COLORS,
+  GLOBE_RELIEF_COLORS,
+  GLOBE_TERRAIN_COLORS,
+} from '@/constants/theme';
 import { cn } from '@/lib/cn';
 import { CoverageLevel, coverageShapes } from '@/lib/coverage';
-import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
+import { IMAGERY, IMAGERY_ENABLED, TERRAIN_ENABLED, TERRAIN_IMAGERY } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { Course, Round } from '@/models/types';
 import { useAppStore, usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
@@ -96,7 +103,12 @@ export default function HomeScreen() {
   const toggle = useLiquidSlot(view === 'list' ? 1 : 0);
   const [segmentWidth, setSegmentWidth] = useState(0);
   const [appearance, setAppearance] = useState<MapAppearance>('map');
-  const palette = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
+  const palette =
+    appearance === 'map'
+      ? GLOBE_COLORS
+      : appearance === 'terrain'
+        ? GLOBE_RELIEF_COLORS
+        : GLOBE_TERRAIN_COLORS;
   const [imagery, setImagery] = useState<ImageryStatus>('idle');
   const [summaryOpen, setSummaryOpen] = useState(false);
   const friendCount = useAppStore((s) => s.friends.length);
@@ -361,17 +373,25 @@ export default function HomeScreen() {
                 );
               })}
             </View>
+            {/* "Where I've played" shading, drawn by the vector map only. */}
+            {appearance === 'map' && (
+              <Animated.View
+                style={{ opacity: mapOpacity }}
+                pointerEvents={view === 'map' ? 'auto' : 'none'}
+              >
+                <CoveragePicker
+                  value={coverageLevel}
+                  onChange={setCoverageLevel}
+                  size={APPEARANCE_BUTTON_SIZE}
+                />
+              </Animated.View>
+            )}
           </View>
           <Animated.View
             style={{ opacity: mapOpacity }}
             pointerEvents={view === 'map' ? 'auto' : 'none'}
           >
-            <AppearanceButton
-              appearance={appearance}
-              onAppearanceChange={setAppearance}
-              coverage={coverageLevel}
-              onCoverageChange={setCoverageLevel}
-            />
+            <AppearanceButton appearance={appearance} onAppearanceChange={setAppearance} />
           </Animated.View>
         </View>
       </View>
@@ -410,17 +430,18 @@ export default function HomeScreen() {
       )}
 
       {/* Imagery providers ask to be credited while their tiles are on screen. */}
-      {appearance === 'terrain' && IMAGERY_ENABLED && (
+      {((appearance === 'satellite' && IMAGERY_ENABLED) ||
+        (appearance === 'terrain' && TERRAIN_ENABLED)) && (
         <Animated.View
           style={{ position: 'absolute', right: 16, bottom: tabSpace + 16, opacity: mapOpacity }}
           pointerEvents="none"
         >
           <Text className="rounded-md bg-background/60 px-2 py-1 text-[10px] text-muted-foreground">
             {imagery === 'unavailable'
-              ? 'Satellite tiles blocked here'
+              ? `${appearance === 'terrain' ? 'Terrain' : 'Satellite'} tiles blocked here`
               : imagery === 'loading'
                 ? 'Loading tiles…'
-                : `Imagery © ${IMAGERY.attribution}`}
+                : `Imagery © ${(appearance === 'terrain' ? TERRAIN_IMAGERY : IMAGERY).attribution}`}
           </Text>
         </Animated.View>
       )}

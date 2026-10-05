@@ -85,6 +85,18 @@ export const GLOBE_TERRAIN_COLORS: GlobePalette = {
 };
 
 /**
+ * Terrain look: a pale relief map, so borders go dark and pins drop to the
+ * deep green to keep their contrast.
+ */
+export const GLOBE_RELIEF_COLORS: GlobePalette = {
+  ...GLOBE_TERRAIN_COLORS,
+  landStroke: 'hsla(0, 0%, 0%, 0.35)',
+  atmosphere: 'hsl(200, 60%, 80%)',
+  limb: 'hsl(200, 40%, 70%)',
+  pin: 'hsl(158, 83%, 30%)',
+};
+
+/**
  * One hue per continent for the "where I've played" shading, chosen to read
  * apart from each other and from the green and lime pins over dark land.
  */

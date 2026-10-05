@@ -29,7 +29,12 @@ import countries110m from 'world-atlas/countries-110m.json';
 import countries50m from 'world-atlas/countries-50m.json';
 
 import TerrainLayer, { ImageryStatus } from '@/components/terrain-layer';
-import { continentShade, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
+import {
+  continentShade,
+  GLOBE_COLORS,
+  GLOBE_RELIEF_COLORS,
+  GLOBE_TERRAIN_COLORS,
+} from '@/constants/theme';
 import { CoverageShape } from '@/lib/coverage';
 import { Continent } from '@/models/types';
 import { project, TILE_PX } from '@/lib/geo';
@@ -160,9 +165,9 @@ type Props = {
   onSelectMarker?: (id: string) => void;
   /** Where the globe faces on first render, as [longitude, latitude]. */
   initialCentre?: [number, number] | null;
-  /** Dark map styling, or natural-colour terrain with sun shading. */
-  appearance?: 'map' | 'terrain';
-  /** Streamed-imagery state, for the attribution chip in terrain view. */
+  /** Dark map styling, satellite imagery, or a shaded-relief terrain map. */
+  appearance?: 'map' | 'satellite' | 'terrain';
+  /** Streamed-imagery state, for the attribution chip in satellite and terrain views. */
   onImageryStatus?: (status: ImageryStatus) => void;
 };
 
@@ -178,8 +183,9 @@ export default function Globe({
   appearance = 'map',
   onImageryStatus,
 }: Props) {
-  const terrain = appearance === 'terrain';
-  // How far into terrain the picture is, 0 to 1. A change of appearance
+  // Satellite and terrain are both drawn by the GL layer; the map is not.
+  const terrain = appearance !== 'map';
+  // How far into the imagery the picture is, 0 to 1. A change of appearance
   // eases this over APPEARANCE_FADE_MS, and the two looks are drawn on top
   // of each other with complementary opacity, so one dissolves into the other.
   const [mix, setMix] = useState(terrain ? 1 : 0);
@@ -201,7 +207,12 @@ export default function Globe({
     return () => mixAnim.removeListener(id);
   }, [terrain, mixAnim]);
   // Colours that can't be blended switch over halfway through.
-  const pal = mix > 0.5 ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
+  const pal =
+    mix > 0.5
+      ? appearance === 'terrain'
+        ? GLOBE_RELIEF_COLORS
+        : GLOBE_TERRAIN_COLORS
+      : GLOBE_COLORS;
   const mapOpacity = 1 - mix;
   const [rotation, setRotation] = useState<[number, number]>([70, -15]);
   const rotationRef = useRef<[number, number]>([70, -15]);
@@ -688,6 +699,7 @@ export default function Globe({
             rotation={rotation}
             onStatus={onImageryStatus}
             active={mix > 0}
+            look={appearance === 'terrain' ? 'terrain' : 'satellite'}
           />
         </Animated.View>
       )}
