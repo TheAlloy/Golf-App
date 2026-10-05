@@ -24,12 +24,12 @@ const INNER = SIZE - BORDER * 2;
 /** Gap between the circles in the open menu. */
 const GAP = 8;
 const OPEN_MS = 220;
-/** The shading ring around the Map circle: radius, where on it the three sit (degrees, y down), duration. */
+/** The shading ring around the Map circle: radius, where on it the two sit (degrees, y down), duration. */
 const RING_RADIUS = 88;
-const RING_ANGLES = [215, 180, 145];
+const RING_ANGLES = [200, 160];
 const RING_MS = 240;
 /** How far Terrain drops to clear the ring's lowest circle. */
-const RING_SHIFT = 52;
+const RING_SHIFT = 36;
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -37,12 +37,11 @@ type IconName = keyof typeof Ionicons.glyphMap;
 const LEVEL_ICONS: Record<Exclude<CoverageLevel, 'off'>, IconName> = {
   states: 'map',
   countries: 'flag',
-  continents: 'earth',
 };
 
 /**
  * The round layers button in the top right. Pressing it fans out the two
- * looks, Map and Terrain. With Map in use, the three "where I've played"
+ * looks, Map and Terrain. With Map in use, the two "where I've played"
  * shading levels come out on a ring around its circle, each a toggle. A tap
  * anywhere else closes the fan.
  */
@@ -102,7 +101,7 @@ export function AppearanceButton({
         <Pressable className="flex-1" onPress={close} accessibilityLabel="Close">
           {anchor && (
             <Fan anchor={anchor}>
-              {/* Map, with the three shadings on a ring around it when it's the look in use. */}
+              {/* Map, with the two shadings on a ring around it when it's the look in use. */}
               <FanRow
                 index={0}
                 label="Map"

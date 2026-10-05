@@ -13,13 +13,12 @@ import { Continent, Course } from '@/models/types';
  * the whole world (Natural Earth, via world-atlas) and states for the US
  * (Census Bureau, via us-atlas).
  */
-export type CoverageLevel = 'off' | 'states' | 'countries' | 'continents';
+export type CoverageLevel = 'off' | 'states' | 'countries';
 
 export const COVERAGE_LEVELS: { id: CoverageLevel; label: string }[] = [
   { id: 'off', label: 'Off' },
   { id: 'states', label: 'US states' },
   { id: 'countries', label: 'Countries' },
-  { id: 'continents', label: 'Continents' },
 ];
 
 type Feature = GeoJSON.Feature;
@@ -103,14 +102,6 @@ export function coverageShapes(level: CoverageLevel, courses: Course[]): Coverag
   };
 
   switch (level) {
-    case 'continents': {
-      const played = new Set(courses.map((c) => c.continent));
-      for (const f of COUNTRIES.features) {
-        const continent = CONTINENT_BY_ID[String(f.id)];
-        if (continent && played.has(continent)) add(f, continent);
-      }
-      return out;
-    }
     case 'countries':
       for (const c of courses) {
         const f = lookup(containingCountry, () => COUNTRIES, c);

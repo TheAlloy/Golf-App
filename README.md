@@ -27,8 +27,8 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
   wishlisted one in lime yellow. A thumbnail in the top right switches to a
   terrain view: NASA Blue Marble satellite imagery wrapped onto the sphere by a
   GPU shader (expo-gl), with country borders and pins drawn over it. The
-  round layer button fans out the other look and three "where I've played"
-  shadings for the dark map: US states, countries, or whole continents. Drag to spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
+  layers button fans out Map and Terrain, and on the map two "where I've
+  played" shadings, US states or countries, coloured by continent. Drag to spin, pinch (or trackpad-pinch in a browser) to zoom smoothly into the spot under your fingers; close up, courses become flags with a name-and-status callout. Tap one to open the course.
 - **Real course data** — 15,667 US courses from the
   [OpenGolfAPI](https://github.com/opengolfapi/data) open dataset, including
   hole-by-hole par and stroke index, plus 60 curated international courses.
