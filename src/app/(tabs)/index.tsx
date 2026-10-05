@@ -18,7 +18,6 @@ import {
   AppearanceButton,
   MapAppearance,
 } from '@/components/appearance-button';
-import { CoveragePicker } from '@/components/coverage-picker';
 import { ProgressSummary } from '@/components/progress-summary';
 import { useLiquidSlot } from '@/components/liquid-pill-bar';
 import { useTabBarSpace } from '@/components/tab-bar';
@@ -357,18 +356,6 @@ export default function HomeScreen() {
                 );
               })}
             </View>
-            {appearance === 'map' && (
-              <Animated.View
-                style={{ opacity: mapOpacity }}
-                pointerEvents={view === 'map' ? 'auto' : 'none'}
-              >
-                <CoveragePicker
-                  value={coverageLevel}
-                  onChange={setCoverageLevel}
-                  size={APPEARANCE_BUTTON_SIZE}
-                />
-              </Animated.View>
-            )}
           </View>
           <Animated.View
             style={{ opacity: mapOpacity }}
@@ -376,7 +363,9 @@ export default function HomeScreen() {
           >
             <AppearanceButton
               appearance={appearance}
-              onPress={() => setAppearance(appearance === 'map' ? 'terrain' : 'map')}
+              onAppearanceChange={setAppearance}
+              coverage={coverageLevel}
+              onCoverageChange={setCoverageLevel}
             />
           </Animated.View>
         </View>

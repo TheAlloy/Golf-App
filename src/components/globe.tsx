@@ -2,9 +2,11 @@ import { geoBounds, geoDistance, geoGraticule10, geoOrthographic, geoPath } from
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
+  Animated,
   GestureResponderEvent,
   PanResponder,
   Platform,
+  StyleSheet,
   View,
 } from 'react-native';
 import Svg, {
@@ -132,6 +134,8 @@ export type GlobeMarker = {
   detail?: string;
 };
 
+/** Length of the dissolve between the map and terrain looks. */
+const APPEARANCE_FADE_MS = 240;
 /** From this zoom the pins become flags with a name-and-status callout. */
 export const FLAG_ZOOM = 5;
 /** How quickly zoom eases toward its target; lower is snappier. */
@@ -172,8 +176,31 @@ export default function Globe({
   appearance = 'map',
   onImageryStatus,
 }: Props) {
-  const pal = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
   const terrain = appearance === 'terrain';
+  // How far into terrain the picture is, 0 to 1. A change of appearance
+  // eases this over APPEARANCE_FADE_MS, and the two looks are drawn on top
+  // of each other with complementary opacity, so one dissolves into the other.
+  const [mix, setMix] = useState(terrain ? 1 : 0);
+  const [mixAnim] = useState(() => new Animated.Value(terrain ? 1 : 0));
+  // Once terrain has been shown its GL layer stays mounted (idle while
+  // hidden), so later switches don't spend the fade's first frames setting
+  // the GPU up again.
+  const [terrainUsed, setTerrainUsed] = useState(terrain);
+  useEffect(() => {
+    const id = mixAnim.addListener(({ value }) => {
+      setMix(value);
+      if (value > 0) setTerrainUsed(true);
+    });
+    Animated.timing(mixAnim, {
+      toValue: terrain ? 1 : 0,
+      duration: APPEARANCE_FADE_MS,
+      useNativeDriver: false,
+    }).start();
+    return () => mixAnim.removeListener(id);
+  }, [terrain, mixAnim]);
+  // Colours that can't be blended switch over halfway through.
+  const pal = mix > 0.5 ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
+  const mapOpacity = 1 - mix;
   const [rotation, setRotation] = useState<[number, number]>([70, -15]);
   const rotationRef = useRef<[number, number]>([70, -15]);
   const gestureStart = useRef<[number, number]>([70, -15]);
@@ -648,16 +675,19 @@ export default function Globe({
   return (
     <View ref={container} {...(panHandlers ?? {})} style={{ width, height }}>
       {/* Satellite imagery on the GPU; the SVG above it leaves the disc clear. */}
-      {terrain && (
-        <TerrainLayer
-          width={width}
-          height={height}
-          cx={cx}
-          cy={cy}
-          radius={scale}
-          rotation={rotation}
-          onStatus={onImageryStatus}
-        />
+      {terrainUsed && (
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: mixAnim }]} pointerEvents="none">
+          <TerrainLayer
+            width={width}
+            height={height}
+            cx={cx}
+            cy={cy}
+            radius={scale}
+            rotation={rotation}
+            onStatus={onImageryStatus}
+            active={mix > 0}
+          />
+        </Animated.View>
       )}
       {/* Positioned so the vector layer paints above the absolutely placed GL canvas. */}
       <Svg width={width} height={height} style={{ position: 'relative', zIndex: 1 }}>
@@ -685,7 +715,7 @@ export default function Globe({
         <G clipPath="url(#viewport)">
           {/* Halo, sphere, then a crisp limb so the edge reads as a horizon. */}
           <Circle cx={cx} cy={cy} r={scale * 1.05} fill="url(#atmosphere)" />
-          {!terrain && <Circle cx={cx} cy={cy} r={scale} fill="url(#ocean)" />}
+          {mix < 1 && <Circle cx={cx} cy={cy} r={scale} fill="url(#ocean)" opacity={mapOpacity} />}
           <Circle
             cx={cx}
             cy={cy}
@@ -696,21 +726,31 @@ export default function Globe({
             opacity={0.32}
           />
 
-          {!terrain && (
-            <Path d={graticulePath} stroke={pal.graticule} strokeWidth={0.5} fill="none" />
+          {mix < 1 && (
+            <Path
+              d={graticulePath}
+              stroke={GLOBE_COLORS.graticule}
+              strokeWidth={0.5}
+              fill="none"
+              opacity={mapOpacity}
+            />
           )}
 
           {/* Terrain only: imagery can fill the screen, so shade the header strip. */}
-          {terrain && <Rect x={0} y={0} width={width} height={180} fill="url(#scrim)" />}
+          {mix > 0 && (
+            <Rect x={0} y={0} width={width} height={180} fill="url(#scrim)" opacity={mix} />
+          )}
 
-          {/* Terrain keeps only faint borders over the imagery, like Earth does. */}
+          {/* Terrain keeps only faint borders over the imagery, like Earth does;
+              the map's land fill fades away underneath. */}
           {landPaths.map((d, i) => (
             <Path
               key={`l${i}`}
               d={d}
-              fill={terrain ? 'none' : pal.land}
+              fill={GLOBE_COLORS.land}
+              fillOpacity={mapOpacity}
               stroke={pal.landStroke}
-              strokeWidth={terrain ? 0.4 : 0.5}
+              strokeWidth={mix > 0.5 ? 0.4 : 0.5}
             />
           ))}
 
@@ -735,7 +775,7 @@ export default function Globe({
                   cy={p.cy}
                   r={2.3}
                   fill={color}
-                  stroke={terrain ? 'rgba(0, 0, 0, 0.5)' : undefined}
+                  stroke={mix > 0.5 ? 'rgba(0, 0, 0, 0.5)' : undefined}
                   strokeWidth={0.8}
                 />
                 {zoom >= 3 && p.showLabel && (

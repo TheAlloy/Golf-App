@@ -35,6 +35,11 @@ type Props = {
   rotation: [number, number];
   /** Told whenever streamed imagery changes state, for the attribution chip. */
   onStatus?: (status: ImageryStatus) => void;
+  /**
+   * False while the layer is kept mounted but hidden behind the map look:
+   * it then neither redraws nor fetches tiles, and catches up when shown.
+   */
+  active?: boolean;
 };
 
 /**
@@ -238,7 +243,16 @@ function visibleBounds(
  * keeps drawing borders, pins and labels on top; the SVG leaves the disc
  * transparent while this is mounted.
  */
-export default function TerrainLayer({ width, height, cx, cy, radius, rotation, onStatus }: Props) {
+export default function TerrainLayer({
+  width,
+  height,
+  cx,
+  cy,
+  radius,
+  rotation,
+  onStatus,
+  active = true,
+}: Props) {
   const scene = useRef<Scene | null>(null);
   const status = useRef<ImageryStatus>('idle');
   const landed = useRef(0);
@@ -501,7 +515,7 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation, 
 
   useEffect(() => {
     const s = scene.current;
-    if (!s || !ready) return;
+    if (!s || !ready || !active) return;
     const { gl } = s;
     const bw = gl.drawingBufferWidth;
     const bh = gl.drawingBufferHeight;
@@ -554,7 +568,7 @@ export default function TerrainLayer({ width, height, cx, cy, radius, rotation, 
     };
     redraw.current = draw;
     draw();
-  }, [ready, width, height, cx, cy, radius, rotation, refill, ensure, setStatus]);
+  }, [ready, active, width, height, cx, cy, radius, rotation, refill, ensure, setStatus]);
 
   return (
     <GLView
