@@ -24,12 +24,10 @@ const INNER = SIZE - BORDER * 2;
 /** Gap between the circles in the open menu. */
 const GAP = 8;
 const OPEN_MS = 220;
-/** The shading ring around the Map circle: radius, where on it the two sit (degrees, y down), duration. */
-const RING_RADIUS = 88;
-const RING_ANGLES = [200, 160];
+/** How long the shading options take to slide out beside Map. */
 const RING_MS = 240;
-/** How far Terrain drops to clear the ring's lowest circle. */
-const RING_SHIFT = 36;
+/** Room for the shading row to the left of Map; taps pass through its empty part. */
+const SHADING_ROW_WIDTH = 320;
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -42,8 +40,8 @@ const LEVEL_ICONS: Record<Exclude<CoverageLevel, 'off'>, IconName> = {
 /**
  * The round layers button in the top right. Pressing it fans out the two
  * looks, Map and Terrain. With Map in use, the two "where I've played"
- * shading levels come out on a ring around its circle, each a toggle. A tap
- * anywhere else closes the fan.
+ * shading levels slide out in a row to the left of its circle, each a
+ * toggle. A tap anywhere else closes the fan.
  */
 export function AppearanceButton({
   appearance,
@@ -59,7 +57,7 @@ export function AppearanceButton({
   const button = useRef<View>(null);
   const [anchor, setAnchor] = useState<{ right: number; top: number } | null>(null);
   const current = COVERAGE_LEVELS.find((l) => l.id === coverage) ?? COVERAGE_LEVELS[0];
-  // 0–1: how far the shading ring is out around the Map circle. It comes
+  // 0–1: how far the shading options are out beside the Map circle. They come
   // out a beat after the fan opens on the map look, and whenever Map is
   // picked; shading is drawn by the vector map, so Terrain pulls it back in.
   const [ring] = useState(() => new Animated.Value(0));
@@ -101,11 +99,11 @@ export function AppearanceButton({
         <Pressable className="flex-1" onPress={close} accessibilityLabel="Close">
           {anchor && (
             <Fan anchor={anchor}>
-              {/* Map, with the two shadings on a ring around it when it's the look in use. */}
+              {/* Map, with the two shadings in a row to its left when it's the look in use. */}
               <FanRow
                 index={0}
                 label="Map"
-                // The ring's circles take the label's place; Map's green rim says enough.
+                // The shading row takes the label's place; Map's green rim says enough.
                 labelOpacity={ring.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })}
                 selected={appearance === 'map'}
                 onPress={() => onAppearanceChange('map')}
@@ -125,84 +123,100 @@ export function AppearanceButton({
                   >
                     <MapPatch />
                   </View>
-                  {COVERAGE_LEVELS.filter((l) => l.id !== 'off').map((level, i) => {
-                    const id = level.id as Exclude<CoverageLevel, 'off'>;
-                    const active = coverage === id;
-                    const angle = (RING_ANGLES[i] * Math.PI) / 180;
-                    return (
-                      <RingOption
-                        key={id}
-                        out={ring}
-                        dx={RING_RADIUS * Math.cos(angle)}
-                        dy={RING_RADIUS * Math.sin(angle)}
-                        label={level.label}
-                        hint={active ? (coverageNote(id) ?? undefined) : undefined}
-                        selected={active}
-                        shown={appearance === 'map'}
-                        onPress={() => {
-                          onCoverageChange(active ? 'off' : id);
-                          close();
-                        }}
-                        accessibilityLabel={`${active ? 'Stop shading' : 'Shade'} ${level.label.toLowerCase()} you've played`}
-                      >
-                        <View
-                          className="items-center justify-center rounded-full border"
-                          style={{
-                            width: SIZE,
-                            height: SIZE,
-                            backgroundColor: active ? colors.primary : 'hsla(0, 0%, 7%, 0.92)',
-                            borderColor: active ? colors.primary : colors.border,
-                            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.45)',
-                          }}
-                        >
-                          <Ionicons
-                            name={
-                              active ? LEVEL_ICONS[id] : (`${LEVEL_ICONS[id]}-outline` as IconName)
-                            }
-                            size={18}
-                            color={active ? colors.primaryForeground : colors.foreground}
-                          />
-                        </View>
-                      </RingOption>
-                    );
-                  })}
-                </View>
-              </FanRow>
-              {/* Terrain moves down out of the ring's way while it's out. */}
-              <Animated.View
-                style={{
-                  transform: [
-                    {
-                      translateY: ring.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, RING_SHIFT],
-                      }),
-                    },
-                  ],
-                }}
-              >
-                <FanRow
-                  index={1}
-                  label="Terrain"
-                  selected={appearance === 'terrain'}
-                  onPress={() => {
-                    onAppearanceChange('terrain');
-                    close();
-                  }}
-                  accessibilityLabel="Terrain view"
-                  accessibilityState={{ selected: appearance === 'terrain' }}
-                >
-                  <View
+                  {/* Slides in from under Map; untouchable while tucked away. */}
+                  <Animated.View
+                    pointerEvents={appearance === 'map' ? 'box-none' : 'none'}
                     style={{
-                      ...thumbStyle,
-                      borderColor:
-                        appearance === 'terrain' ? colors.primaryBright : thumbStyle.borderColor,
+                      position: 'absolute',
+                      right: SIZE + GAP,
+                      top: 0,
+                      // Anchored inside the 46px Map box, the row would otherwise be
+                      // sized to that box and spill over; a fixed width, filled from
+                      // the right, keeps the circles clear of Map.
+                      width: SHADING_ROW_WIDTH,
+                      height: SIZE,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: 12,
+                      opacity: ring,
+                      transform: [
+                        {
+                          translateX: ring.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [48, 0],
+                          }),
+                        },
+                      ],
                     }}
                   >
-                    <SatellitePatch />
-                  </View>
-                </FanRow>
-              </Animated.View>
+                    {COVERAGE_LEVELS.filter((l) => l.id !== 'off').map((level) => {
+                      const id = level.id as Exclude<CoverageLevel, 'off'>;
+                      const active = coverage === id;
+                      return (
+                        <Pressable
+                          key={id}
+                          className="flex-row items-center gap-2 active:opacity-80"
+                          onPress={() => {
+                            onCoverageChange(active ? 'off' : id);
+                            close();
+                          }}
+                          accessibilityRole="menuitem"
+                          accessibilityLabel={`${active ? 'Stop shading' : 'Shade'} ${level.label.toLowerCase()} you've played`}
+                          accessibilityState={{ selected: active }}
+                        >
+                          <Chip
+                            label={level.label}
+                            hint={active ? (coverageNote(id) ?? undefined) : undefined}
+                            selected={active}
+                          />
+                          <View
+                            className="items-center justify-center rounded-full border"
+                            style={{
+                              width: SIZE,
+                              height: SIZE,
+                              backgroundColor: active ? colors.primary : 'hsla(0, 0%, 7%, 0.92)',
+                              borderColor: active ? colors.primary : colors.border,
+                              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.45)',
+                            }}
+                          >
+                            <Ionicons
+                              name={
+                                active
+                                  ? LEVEL_ICONS[id]
+                                  : (`${LEVEL_ICONS[id]}-outline` as IconName)
+                              }
+                              size={18}
+                              color={active ? colors.primaryForeground : colors.foreground}
+                            />
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </Animated.View>
+                </View>
+              </FanRow>
+              <FanRow
+                index={1}
+                label="Terrain"
+                selected={appearance === 'terrain'}
+                onPress={() => {
+                  onAppearanceChange('terrain');
+                  close();
+                }}
+                accessibilityLabel="Terrain view"
+                accessibilityState={{ selected: appearance === 'terrain' }}
+              >
+                <View
+                  style={{
+                    ...thumbStyle,
+                    borderColor:
+                      appearance === 'terrain' ? colors.primaryBright : thumbStyle.borderColor,
+                  }}
+                >
+                  <SatellitePatch />
+                </View>
+              </FanRow>
             </Fan>
           )}
         </Pressable>
@@ -254,64 +268,6 @@ function Fan({
 }
 
 const FanProgress = createContext<Animated.Value | null>(null);
-
-/**
- * A circle on the ring around Map, placed by its offset from Map's centre.
- * It flies out from that centre as the ring opens and back in as it closes.
- */
-function RingOption({
-  out,
-  dx,
-  dy,
-  label,
-  hint,
-  selected,
-  shown,
-  onPress,
-  accessibilityLabel,
-  children,
-}: {
-  out: Animated.Value;
-  dx: number;
-  dy: number;
-  label: string;
-  hint?: string;
-  selected: boolean;
-  /** Tucked in behind Map, the option must not catch taps meant for it. */
-  shown: boolean;
-  onPress: () => void;
-  accessibilityLabel: string;
-  children: ReactNode;
-}) {
-  return (
-    <Animated.View
-      pointerEvents={shown ? 'box-none' : 'none'}
-      style={{
-        position: 'absolute',
-        // The circle is the row's last child, so its centre lands SIZE/2 in from the right.
-        right: -dx,
-        top: dy,
-        opacity: out,
-        transform: [
-          { translateX: out.interpolate({ inputRange: [0, 1], outputRange: [-dx, 0] }) },
-          { translateY: out.interpolate({ inputRange: [0, 1], outputRange: [-dy, 0] }) },
-          { scale: out.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) },
-        ],
-      }}
-    >
-      <Pressable
-        className="flex-row items-center gap-2 active:opacity-80"
-        onPress={onPress}
-        accessibilityRole="menuitem"
-        accessibilityLabel={accessibilityLabel}
-        accessibilityState={{ selected }}
-      >
-        <Chip label={label} hint={hint} selected={selected} />
-        {children}
-      </Pressable>
-    </Animated.View>
-  );
-}
 
 /** An option's name, green when it's the one in effect. */
 function Chip({ label, hint, selected }: { label: string; hint?: string; selected?: boolean }) {
