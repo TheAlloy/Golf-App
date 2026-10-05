@@ -30,6 +30,54 @@ export function useTabBarSpace(): number {
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
+/**
+ * The liquid move shared by every segmented control: `slot` springs to the
+ * selected index while `stretch` swells sideways and settles back, so the
+ * selected pill reads as a drop of liquid moving rather than a swap. Both
+ * drive transforms, so they run on the native driver. Under reduce-motion
+ * the pill snaps instead.
+ */
+export function useLiquidSlot(target: number): { slot: Animated.Value; stretch: Animated.Value } {
+  const [slot] = useState(() => new Animated.Value(target));
+  const [stretch] = useState(() => new Animated.Value(1));
+  const reduceMotion = useRef(false);
+  useEffect(() => {
+    let live = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((on) => live && (reduceMotion.current = on))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (reduceMotion.current) {
+      slot.setValue(target);
+      return;
+    }
+    stretch.stopAnimation();
+    Animated.parallel([
+      Animated.spring(slot, {
+        toValue: target,
+        stiffness: 170,
+        damping: 18,
+        mass: 0.9,
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(stretch, { toValue: STRETCH, duration: 110, useNativeDriver: true }),
+        Animated.spring(stretch, {
+          toValue: 1,
+          stiffness: 220,
+          damping: 16,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [target, slot, stretch]);
+  return { slot, stretch };
+}
+
 export type PillSlot = {
   key: string;
   icon: IconName;
@@ -61,43 +109,7 @@ export function LiquidPillBar({ slots, activeSlot }: Props) {
   const count = slots.length;
 
   const [slotWidth, setSlotWidth] = useState(0);
-  const [slot] = useState(() => new Animated.Value(activeSlot));
-  const [stretch] = useState(() => new Animated.Value(1));
-  const reduceMotion = useRef(false);
-  useEffect(() => {
-    let live = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((on) => live && (reduceMotion.current = on))
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, []);
-  useEffect(() => {
-    if (reduceMotion.current) {
-      slot.setValue(activeSlot);
-      return;
-    }
-    stretch.stopAnimation();
-    Animated.parallel([
-      Animated.spring(slot, {
-        toValue: activeSlot,
-        stiffness: 170,
-        damping: 18,
-        mass: 0.9,
-        useNativeDriver: true,
-      }),
-      Animated.sequence([
-        Animated.timing(stretch, { toValue: STRETCH, duration: 110, useNativeDriver: true }),
-        Animated.spring(stretch, {
-          toValue: 1,
-          stiffness: 220,
-          damping: 16,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-  }, [activeSlot, slot, stretch]);
+  const { slot, stretch } = useLiquidSlot(activeSlot);
 
   return (
     <View

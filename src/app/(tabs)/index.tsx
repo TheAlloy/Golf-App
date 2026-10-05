@@ -1,7 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, SectionList, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  SectionList,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
@@ -13,6 +20,7 @@ import {
 } from '@/components/appearance-button';
 import { CoveragePicker } from '@/components/coverage-picker';
 import { ProgressSummary } from '@/components/progress-summary';
+import { useLiquidSlot } from '@/components/liquid-pill-bar';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
@@ -25,6 +33,11 @@ import { Course, Round } from '@/models/types';
 import { useAppStore, usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
 
 type HomeView = 'map' | 'list';
+
+/** Length of the dissolve between the globe and the list. */
+const VIEW_FADE_MS = 240;
+/** Inset of the toggle's pill from its edge, matching the nav bar. */
+const TOGGLE_INSET = 4;
 
 type PlayedCourse = {
   course: Course;
@@ -71,6 +84,18 @@ export default function HomeScreen() {
   );
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [view, setView] = useState<HomeView>('map');
+  // 0 shows the globe, 1 the list; switching dissolves one into the other.
+  const [fade] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(fade, {
+      toValue: view === 'list' ? 1 : 0,
+      duration: VIEW_FADE_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [view, fade]);
+  const mapOpacity = fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+  const toggle = useLiquidSlot(view === 'list' ? 1 : 0);
+  const [segmentWidth, setSegmentWidth] = useState(0);
   const [appearance, setAppearance] = useState<MapAppearance>('map');
   const palette = appearance === 'terrain' ? GLOBE_TERRAIN_COLORS : GLOBE_COLORS;
   const [imagery, setImagery] = useState<ImageryStatus>('idle');
@@ -176,8 +201,13 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Kept mounted in list view so the globe keeps its position and zoom. */}
-      <View className="flex-1" style={{ display: view === 'map' ? 'flex' : 'none' }}>
+      {/* Both views stay mounted, so the globe keeps its position and zoom
+          and the two can dissolve into one another. */}
+      {/* Animated.View takes no className, so these wrappers are styled inline. */}
+      <Animated.View
+        style={{ flex: 1, opacity: mapOpacity }}
+        pointerEvents={view === 'map' ? 'auto' : 'none'}
+      >
         <Globe
           width={width}
           height={height}
@@ -190,12 +220,15 @@ export default function HomeScreen() {
           onImageryStatus={setImagery}
           coverage={coverage}
         />
-      </View>
+      </Animated.View>
 
-      {view === 'list' && (
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { opacity: fade }]}
+        pointerEvents={view === 'list' ? 'auto' : 'none'}
+      >
         <SectionList
           indicatorStyle="white"
-          className="absolute inset-0"
+          className="flex-1"
           sections={sections}
           keyExtractor={(pc) => pc.course.id}
           stickySectionHeadersEnabled={false}
@@ -226,16 +259,18 @@ export default function HomeScreen() {
             </View>
           }
         />
-      )}
+      </Animated.View>
 
       {/* Top bar: what this globe shows, and where you stand */}
       <View
-        className={cn(
-          'absolute left-0 right-0 gap-3 px-4 pb-3',
-          view === 'list' && 'bg-background'
-        )}
+        className="absolute left-0 right-0 gap-3 px-4 pb-3"
         style={{ top: 0, paddingTop: insets.top + 8 }}
       >
+        {/* Solid behind the bar in list view, fading in with it. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.background, opacity: fade }]}
+        />
         <View className="flex-row items-center justify-between">
           <Text className="font-bold text-2xl text-foreground">Global Play</Text>
           <Pressable
@@ -256,10 +291,35 @@ export default function HomeScreen() {
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
             <View
-              className="flex-row self-start rounded-full border border-border bg-card/90 p-1"
-              style={{ height: APPEARANCE_BUTTON_SIZE }}
+              className="flex-row self-start rounded-full border border-border bg-card/90"
+              style={{ height: APPEARANCE_BUTTON_SIZE, padding: TOGGLE_INSET - 1 }}
               accessibilityRole="tablist"
             >
+              {/* The selected pill, one element that glides between the two
+                  segments with the nav bar's liquid move. */}
+              {segmentWidth > 0 && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    borderRadius: 999,
+                    backgroundColor: colors.primary,
+                    left: TOGGLE_INSET - 1,
+                    top: TOGGLE_INSET - 1,
+                    width: segmentWidth,
+                    height: APPEARANCE_BUTTON_SIZE - TOGGLE_INSET * 2,
+                    transform: [
+                      {
+                        translateX: toggle.slot.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, segmentWidth],
+                        }),
+                      },
+                      { scaleX: toggle.stretch },
+                    ],
+                  }}
+                />
+              )}
               {(
                 [
                   ['map', 'Map', 'earth'],
@@ -270,10 +330,12 @@ export default function HomeScreen() {
                 return (
                   <Pressable
                     key={v}
-                    className={cn(
-                      'flex-row items-center gap-2 rounded-full px-4',
-                      active ? 'bg-primary' : 'bg-transparent'
-                    )}
+                    className="flex-row items-center justify-center gap-2 rounded-full px-4"
+                    // Both segments take the wider one's width, so the pill fits either.
+                    style={segmentWidth > 0 ? { width: segmentWidth } : undefined}
+                    onLayout={(e) =>
+                      setSegmentWidth((w) => Math.max(w, Math.ceil(e.nativeEvent.layout.width)))
+                    }
                     onPress={() => setView(v)}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: active }}
@@ -295,20 +357,28 @@ export default function HomeScreen() {
                 );
               })}
             </View>
-            {showCoverage && (
-              <CoveragePicker
-                value={coverageLevel}
-                onChange={setCoverageLevel}
-                size={APPEARANCE_BUTTON_SIZE}
-              />
+            {appearance === 'map' && (
+              <Animated.View
+                style={{ opacity: mapOpacity }}
+                pointerEvents={view === 'map' ? 'auto' : 'none'}
+              >
+                <CoveragePicker
+                  value={coverageLevel}
+                  onChange={setCoverageLevel}
+                  size={APPEARANCE_BUTTON_SIZE}
+                />
+              </Animated.View>
             )}
           </View>
-          {view === 'map' && (
+          <Animated.View
+            style={{ opacity: mapOpacity }}
+            pointerEvents={view === 'map' ? 'auto' : 'none'}
+          >
             <AppearanceButton
               appearance={appearance}
               onPress={() => setAppearance(appearance === 'map' ? 'terrain' : 'map')}
             />
-          )}
+          </Animated.View>
         </View>
       </View>
 
@@ -323,33 +393,32 @@ export default function HomeScreen() {
       />
 
       {/* Legend: what the two dot colours mean */}
-      {(!empty || wishedCourses.length > 0) && view === 'map' && (
-        <View
-          className="absolute left-4 rounded-xl bg-card/90 px-3 py-2"
-          style={{ bottom: tabSpace + 16 }}
+      {(!empty || wishedCourses.length > 0) && (
+        <Animated.View
+          style={{ position: 'absolute', left: 16, bottom: tabSpace + 16, opacity: mapOpacity }}
+          pointerEvents="none"
         >
-          <View className="flex-row items-center gap-3">
+          <View className="flex-row items-center gap-3 rounded-xl bg-card/90 px-3 py-2">
             <LegendDot color={palette.pin} label="Played" />
             <LegendDot color={palette.wishlist} label="Wishlist" />
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Imagery providers ask to be credited while their tiles are on screen. */}
-      {view === 'map' && appearance === 'terrain' && IMAGERY_ENABLED && (
-        <View
-          className="absolute right-4 rounded-md bg-background/60 px-2 py-1"
-          style={{ bottom: tabSpace + 16 }}
+      {appearance === 'terrain' && IMAGERY_ENABLED && (
+        <Animated.View
+          style={{ position: 'absolute', right: 16, bottom: tabSpace + 16, opacity: mapOpacity }}
           pointerEvents="none"
         >
-          <Text className="text-[10px] text-muted-foreground">
+          <Text className="rounded-md bg-background/60 px-2 py-1 text-[10px] text-muted-foreground">
             {imagery === 'unavailable'
               ? 'Satellite tiles blocked here'
               : imagery === 'loading'
                 ? 'Loading tiles…'
                 : `Imagery © ${IMAGERY.attribution}`}
           </Text>
-        </View>
+        </Animated.View>
       )}
     </View>
   );
