@@ -23,7 +23,7 @@ import { useLiquidSlot } from '@/components/liquid-pill-bar';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Text } from '@/components/ui/text';
-import { colors, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
+import { colors, continentShade, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
 import { cn } from '@/lib/cn';
 import { CoverageLevel, coverageShapes } from '@/lib/coverage';
 import { IMAGERY, IMAGERY_ENABLED } from '@/lib/imagery';
@@ -130,6 +130,11 @@ export default function HomeScreen() {
           )
         : [],
     [coverageLevel, playedCourses, showCoverage]
+  );
+
+  const shadedContinents = useMemo(
+    () => [...new Set(coverage.map((c) => c.continent))].sort(),
+    [coverage]
   );
 
   // Wishlisted courses you haven't played yet, as their own lime-yellow markers.
@@ -387,9 +392,19 @@ export default function HomeScreen() {
           style={{ position: 'absolute', left: 16, bottom: tabSpace + 16, opacity: mapOpacity }}
           pointerEvents="none"
         >
-          <View className="flex-row items-center gap-3 rounded-xl bg-card/90 px-3 py-2">
-            <LegendDot color={palette.pin} label="Played" />
-            <LegendDot color={palette.wishlist} label="Wishlist" />
+          <View className="gap-2 rounded-xl bg-card/90 px-3 py-2">
+            <View className="flex-row items-center gap-3">
+              <LegendDot color={palette.pin} label="Played" />
+              <LegendDot color={palette.wishlist} label="Wishlist" />
+            </View>
+            {/* Each continent shaded gets its own colour; name the ones on show. */}
+            {shadedContinents.length > 0 && (
+              <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
+                {shadedContinents.map((c) => (
+                  <LegendDot key={c} color={continentShade(c).swatch} label={c} />
+                ))}
+              </View>
+            )}
           </View>
         </Animated.View>
       )}

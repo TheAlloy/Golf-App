@@ -1,3 +1,5 @@
+import { Continent } from '@/models/types';
+
 /**
  * The same tokens as src/global.css, for the places that need a real colour
  * value rather than a Tailwind class: navigation options, map markers, SVG
@@ -57,9 +59,6 @@ export const GLOBE_COLORS = {
   pin: 'hsl(158, 83%, 30%)',
   wishlist: 'hsl(68, 92%, 60%)',
   pinLabel: 'hsl(0, 0%, 90%)',
-  // "Where I've played" shading over land, with an edge so adjacent areas read apart.
-  coverage: 'hsla(158, 80%, 46%, 0.34)',
-  coverageEdge: 'hsla(158, 85%, 62%, 0.85)',
   callout: 'hsla(0, 0%, 6%, 0.92)',
   calloutEdge: 'hsla(0, 0%, 100%, 0.12)',
 };
@@ -84,6 +83,33 @@ export const GLOBE_TERRAIN_COLORS: GlobePalette = {
   // Lifted so a played dot still reads against vegetation green.
   pin: 'hsl(158, 80%, 46%)',
 };
+
+/**
+ * One hue per continent for the "where I've played" shading, chosen to read
+ * apart from each other and from the green and lime pins over dark land.
+ */
+export const CONTINENT_HUES: Record<Continent, { h: number; s: number; l: number }> = {
+  'North America': { h: 199, s: 89, l: 58 },
+  'South America': { h: 330, s: 80, l: 62 },
+  Europe: { h: 158, s: 80, l: 50 },
+  Africa: { h: 40, s: 96, l: 58 },
+  Asia: { h: 14, s: 90, l: 60 },
+  Australia: { h: 265, s: 80, l: 70 },
+};
+
+/** Translucent fill and a firmer edge for a continent's shading. */
+export function continentShade(continent: Continent): {
+  fill: string;
+  edge: string;
+  swatch: string;
+} {
+  const { h, s, l } = CONTINENT_HUES[continent];
+  return {
+    fill: `hsla(${h}, ${s}%, ${l}%, 0.34)`,
+    edge: `hsla(${h}, ${s}%, ${Math.min(90, l + 14)}%, 0.85)`,
+    swatch: `hsl(${h}, ${s}%, ${l}%)`,
+  };
+}
 
 /** Medal colours for achievement tiers. */
 export const TIER_COLORS = {

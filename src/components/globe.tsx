@@ -29,7 +29,9 @@ import countries110m from 'world-atlas/countries-110m.json';
 import countries50m from 'world-atlas/countries-50m.json';
 
 import TerrainLayer, { ImageryStatus } from '@/components/terrain-layer';
-import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
+import { continentShade, GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
+import { CoverageShape } from '@/lib/coverage';
+import { Continent } from '@/models/types';
 import { project, TILE_PX } from '@/lib/geo';
 import { courseTileUrl } from '@/lib/imagery';
 
@@ -152,7 +154,7 @@ type Props = {
   /** Individual courses, revealed as you zoom in. */
   markers?: GlobeMarker[];
   /** Areas to shade as played (countries, states, discs…), as GeoJSON features. */
-  coverage?: GeoJSON.Feature[];
+  coverage?: CoverageShape[];
   zoom?: number;
   onZoomChange?: (zoom: number) => void;
   onSelectMarker?: (id: string) => void;
@@ -613,8 +615,8 @@ export default function Globe({
     const visible = (lng: number, lat: number) => geoDistance([lng, lat], centre) < Math.PI / 2;
 
     const coveragePaths = coverage
-      .map((f) => path(f as never))
-      .filter((d): d is string => Boolean(d));
+      .map((c) => ({ d: path(c.feature as never), continent: c.continent }))
+      .filter((c): c is { d: string; continent: Continent } => Boolean(c.d));
 
     // Finer coastlines once zoomed in, and only the countries that can be on screen.
     const fine = zoom >= FINE_ZOOM;
@@ -755,15 +757,12 @@ export default function Globe({
           ))}
 
           {/* Where you've played, shaded over the land at the chosen level. */}
-          {coveragePaths.map((d, i) => (
-            <Path
-              key={`cov${i}`}
-              d={d}
-              fill={GLOBE_COLORS.coverage}
-              stroke={GLOBE_COLORS.coverageEdge}
-              strokeWidth={0.7}
-            />
-          ))}
+          {coveragePaths.map(({ d, continent }, i) => {
+            const shade = continentShade(continent);
+            return (
+              <Path key={`cov${i}`} d={d} fill={shade.fill} stroke={shade.edge} strokeWidth={0.7} />
+            );
+          })}
 
           {pins.map((p) => {
             const color = p.kind === 'wishlist' ? pal.wishlist : pal.pin;

@@ -23,6 +23,9 @@ export const COVERAGE_LEVELS: { id: CoverageLevel; label: string }[] = [
 ];
 
 type Feature = GeoJSON.Feature;
+
+/** An area to shade, with the continent that picks its colour. */
+export type CoverageShape = { feature: Feature; continent: Continent };
 type Bounds = [[number, number], [number, number]];
 
 const COUNTRIES = topojson.feature(
@@ -88,14 +91,14 @@ const isUS = (course: Course) => course.country === 'United States of America';
  * Shapes to colour for a level. Shapes that several courses share (a country
  * played five times) appear once.
  */
-export function coverageShapes(level: CoverageLevel, courses: Course[]): Feature[] {
+export function coverageShapes(level: CoverageLevel, courses: Course[]): CoverageShape[] {
   if (level === 'off' || courses.length === 0) return [];
   const unique = new Set<Feature>();
-  const out: Feature[] = [];
-  const add = (f: Feature | null) => {
+  const out: CoverageShape[] = [];
+  const add = (f: Feature | null, continent: Continent) => {
     if (f && !unique.has(f)) {
       unique.add(f);
-      out.push(f);
+      out.push({ feature: f, continent });
     }
   };
 
@@ -104,15 +107,21 @@ export function coverageShapes(level: CoverageLevel, courses: Course[]): Feature
       const played = new Set(courses.map((c) => c.continent));
       for (const f of COUNTRIES.features) {
         const continent = CONTINENT_BY_ID[String(f.id)];
-        if (continent && played.has(continent)) add(f);
+        if (continent && played.has(continent)) add(f, continent);
       }
       return out;
     }
     case 'countries':
-      for (const c of courses) add(lookup(containingCountry, () => COUNTRIES, c));
+      for (const c of courses) {
+        const f = lookup(containingCountry, () => COUNTRIES, c);
+        // The country's own continent, falling back to the course's.
+        add(f, (f && CONTINENT_BY_ID[String(f.id)]) || c.continent);
+      }
       return out;
     case 'states':
-      for (const c of courses) if (isUS(c)) add(lookup(containingState, usStates, c));
+      for (const c of courses) {
+        if (isUS(c)) add(lookup(containingState, usStates, c), 'North America');
+      }
       return out;
   }
 }
