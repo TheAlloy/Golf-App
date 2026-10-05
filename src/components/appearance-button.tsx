@@ -37,7 +37,7 @@ const LEVEL_ICONS: Record<Exclude<CoverageLevel, 'off'>, IconName> = {
 
 /**
  * The round layer button in the top right, in the style of Google Earth's: a
- * thumbnail of the look you'd switch to. Pressing it fans out five circles
+ * thumbnail of the look currently on screen. Pressing it fans out five circles
  * underneath: that other look, then the four "where I've played" shading
  * levels, each a toggle. A tap anywhere else closes the fan.
  */
@@ -70,12 +70,13 @@ export function AppearanceButton({
         ref={button}
         onPress={open}
         accessibilityRole="button"
-        accessibilityLabel={`View options. ${next === 'terrain' ? 'Map' : 'Terrain'} view, shading ${current.label.toLowerCase()}`}
+        accessibilityLabel={`View options. ${appearance === 'map' ? 'Map' : 'Terrain'} view, shading ${current.label.toLowerCase()}`}
         accessibilityState={{ expanded: anchor !== null }}
         className="active:opacity-80"
         style={thumbStyle}
       >
-        {next === 'terrain' ? <SatellitePatch /> : <MapPatch />}
+        {/* The look on screen now; the fan below offers the other. */}
+        {appearance === 'terrain' ? <SatellitePatch /> : <MapPatch />}
       </Pressable>
 
       <Modal visible={anchor !== null} transparent animationType="none" onRequestClose={close}>
