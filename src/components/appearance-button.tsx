@@ -35,9 +35,8 @@ const LEVEL_ICONS: Record<Exclude<CoverageLevel, 'off'>, IconName> = {
 };
 
 /**
- * The round layer button in the top right, in the style of Google Earth's: a
- * thumbnail of the look currently on screen. Pressing it fans out four circles
- * underneath: that other look, then the three "where I've played" shading
+ * The round layers button in the top right. Pressing it fans out five circles
+ * underneath: Map and Terrain, then the three "where I've played" shading
  * levels, each a toggle. A tap anywhere else closes the fan.
  */
 export function AppearanceButton({
@@ -53,7 +52,6 @@ export function AppearanceButton({
 }) {
   const button = useRef<View>(null);
   const [anchor, setAnchor] = useState<{ right: number; top: number } | null>(null);
-  const next: MapAppearance = appearance === 'map' ? 'terrain' : 'map';
   // Shading is drawn by the vector map; over imagery it has nothing to sit on.
   const shadingAvailable = appearance === 'map';
   const current = COVERAGE_LEVELS.find((l) => l.id === coverage) ?? COVERAGE_LEVELS[0];
@@ -65,44 +63,59 @@ export function AppearanceButton({
 
   return (
     <>
+      {/* A stack of layers: the button for everything about how the globe is drawn. */}
       <Pressable
         ref={button}
         onPress={open}
         accessibilityRole="button"
         accessibilityLabel={`View options. ${appearance === 'map' ? 'Map' : 'Terrain'} view, shading ${current.label.toLowerCase()}`}
         accessibilityState={{ expanded: anchor !== null }}
-        className="active:opacity-80"
-        style={thumbStyle}
+        className="items-center justify-center rounded-full border border-border bg-card/90 active:opacity-80"
+        style={{ width: SIZE, height: SIZE }}
       >
-        {/* The look on screen now; the fan below offers the other. */}
-        {appearance === 'terrain' ? <SatellitePatch /> : <MapPatch />}
+        <Ionicons name="layers-outline" size={22} color={colors.foreground} />
       </Pressable>
 
       <Modal visible={anchor !== null} transparent animationType="none" onRequestClose={close}>
         <Pressable className="flex-1" onPress={close} accessibilityLabel="Close">
           {anchor && (
             <Fan anchor={anchor}>
-              <FanRow
-                index={0}
-                label={next === 'terrain' ? 'Terrain' : 'Map'}
-                onPress={() => {
-                  onAppearanceChange(next);
-                  close();
-                }}
-                accessibilityLabel={`Switch to ${next} view`}
-              >
-                <View style={thumbStyle}>
-                  {next === 'terrain' ? <SatellitePatch /> : <MapPatch />}
-                </View>
-              </FanRow>
+              {/* Both looks, the one on screen ringed in green. */}
+              {(['map', 'terrain'] as const).map((look, i) => {
+                const selected = appearance === look;
+                return (
+                  <FanRow
+                    key={look}
+                    index={i}
+                    label={look === 'terrain' ? 'Terrain' : 'Map'}
+                    selected={selected}
+                    onPress={() => {
+                      onAppearanceChange(look);
+                      close();
+                    }}
+                    accessibilityLabel={`${look === 'terrain' ? 'Terrain' : 'Map'} view`}
+                    accessibilityState={{ selected }}
+                  >
+                    <View
+                      style={{
+                        ...thumbStyle,
+                        borderColor: selected ? colors.primaryBright : thumbStyle.borderColor,
+                      }}
+                    >
+                      {look === 'terrain' ? <SatellitePatch /> : <MapPatch />}
+                    </View>
+                  </FanRow>
+                );
+              })}
               {COVERAGE_LEVELS.filter((l) => l.id !== 'off').map((level, i) => {
                 const id = level.id as Exclude<CoverageLevel, 'off'>;
                 const active = coverage === id;
                 return (
                   <FanRow
                     key={id}
-                    index={i + 1}
+                    index={i + 2}
                     label={level.label}
+                    selected={active}
                     hint={active ? (coverageNote(id) ?? undefined) : undefined}
                     disabled={!shadingAvailable}
                     onPress={() => {
@@ -194,6 +207,7 @@ const FanProgress = createContext<Animated.Value | null>(null);
 function FanRow({
   index,
   label,
+  selected,
   hint,
   disabled,
   onPress,
@@ -203,6 +217,8 @@ function FanRow({
 }: {
   index: number;
   label: string;
+  /** The option in effect: its name chip goes green. */
+  selected?: boolean;
   hint?: string;
   disabled?: boolean;
   onPress: () => void;
@@ -239,8 +255,20 @@ function FanRow({
         accessibilityState={accessibilityState}
       >
         <View className="items-end">
-          <View className="rounded-full bg-card/90 px-3 py-1">
-            <Text className="font-semibold text-xs text-foreground">{label}</Text>
+          <View
+            className={
+              selected ? 'rounded-full bg-primary px-3 py-1' : 'rounded-full bg-card/90 px-3 py-1'
+            }
+          >
+            <Text
+              className={
+                selected
+                  ? 'font-semibold text-xs text-primary-foreground'
+                  : 'font-semibold text-xs text-foreground'
+              }
+            >
+              {label}
+            </Text>
           </View>
           {hint && <Text className="mt-1 text-[10px] text-muted-foreground">{hint}</Text>}
         </View>
