@@ -33,7 +33,8 @@ const OPEN_MS = 220;
 /**
  * The round layers button in the top right. Pressing it fans out the three
  * looks, Map, Satellite and Terrain, as thumbnails, with the one on screen
- * ringed and named in green. A tap anywhere else closes the fan.
+ * ringed and named in green. Picking one keeps the fan open; a tap anywhere
+ * else closes it.
  */
 export function AppearanceButton({
   appearance,
@@ -78,10 +79,9 @@ export function AppearanceButton({
                     index={i}
                     label={look.label}
                     selected={selected}
-                    onPress={() => {
-                      onAppearanceChange(look.id);
-                      close();
-                    }}
+                    // The fan stays open, so you can flick between looks and
+                    // watch the globe change behind it; a tap elsewhere closes it.
+                    onPress={() => onAppearanceChange(look.id)}
                     accessibilityLabel={`${look.label} view`}
                     accessibilityState={{ selected }}
                   >
