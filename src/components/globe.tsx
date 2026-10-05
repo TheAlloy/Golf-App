@@ -14,6 +14,7 @@ import Svg, {
   LinearGradient,
   Ellipse,
   G,
+  Image as SvgImage,
   Line,
   Path,
   RadialGradient,
@@ -27,6 +28,8 @@ import countries50m from 'world-atlas/countries-50m.json';
 
 import TerrainLayer, { ImageryStatus } from '@/components/terrain-layer';
 import { GLOBE_COLORS, GLOBE_TERRAIN_COLORS } from '@/constants/theme';
+import { project, TILE_PX } from '@/lib/geo';
+import { courseTileUrl } from '@/lib/imagery';
 
 export const LAND = topojson.feature(
   countries110m as never,
@@ -604,7 +607,16 @@ export default function Globe({
         if (!xy) return null;
         const kind = m.kind ?? 'played';
         const detail = m.detail ?? (kind === 'wishlist' ? 'Wishlist' : 'Played');
-        return { id: m.id, label: m.label, kind, detail, cx: xy[0], cy: xy[1] };
+        return {
+          id: m.id,
+          label: m.label,
+          kind,
+          detail,
+          cx: xy[0],
+          cy: xy[1],
+          longitude: m.longitude,
+          latitude: m.latitude,
+        };
       })
       .filter((d): d is NonNullable<typeof d> => d !== null);
 
@@ -749,6 +761,9 @@ export default function Globe({
               <Callout
                 key={`callout-${p.id}`}
                 {...p.callout}
+                id={p.id}
+                longitude={p.longitude}
+                latitude={p.latitude}
                 detail={p.detail}
                 color={p.kind === 'wishlist' ? pal.wishlist : pal.pin}
               />
@@ -763,20 +778,55 @@ export default function Globe({
 /** Height of a flag pole, from the course's spot on the ground. */
 const POLE = 18;
 const CALLOUT_H = 44;
-const CALLOUT_MAX_W = 224;
+const CALLOUT_MAX_W = 256;
 const CALLOUT_NAME_SIZE = 12;
 const CALLOUT_DETAIL_SIZE = 10;
+/** Satellite thumbnail of the course at the left of the callout. */
+const THUMB = 32;
+const THUMB_INSET = (CALLOUT_H - THUMB) / 2;
+/** Where the text starts: after the thumbnail and a gap. */
+const CALLOUT_TEXT_X = THUMB_INSET + THUMB + 8;
+/** Tile zoom for the thumbnail: one tile is about 700 m across, a course's worth. */
+const THUMB_ZOOM = 15;
 
 /** Callout geometry, sized from the text since SVG text can't be measured. */
 function calloutFor(name: string, detail: string, cx: number, cy: number) {
   const label = name.length > 30 ? `${name.slice(0, 29)}…` : name;
   // Manrope runs about 0.56em per character at these weights.
-  const w = Math.min(
-    CALLOUT_MAX_W,
-    Math.max(label.length * CALLOUT_NAME_SIZE * 0.56, detail.length * CALLOUT_DETAIL_SIZE * 0.56) +
-      24
+  const text = Math.max(
+    label.length * CALLOUT_NAME_SIZE * 0.56,
+    detail.length * CALLOUT_DETAIL_SIZE * 0.56
   );
+  const w = Math.min(CALLOUT_MAX_W, CALLOUT_TEXT_X + text + 12);
   return { x: cx - w / 2, y: cy - POLE - 8 - CALLOUT_H, w, h: CALLOUT_H, label };
+}
+
+/**
+ * Satellite tiles covering a square window centred on a point, placed in a
+ * thumbnail of the given size. Up to four tiles meet in the window.
+ */
+function thumbTiles(longitude: number, latitude: number, size: number) {
+  const p = project({ latitude, longitude }, THUMB_ZOOM);
+  const half = TILE_PX / 2;
+  const scale = size / TILE_PX;
+  const tiles: { key: string; url: string; x: number; y: number }[] = [];
+  for (const tx of new Set([
+    Math.floor((p.x - half) / TILE_PX),
+    Math.floor((p.x + half) / TILE_PX),
+  ])) {
+    for (const ty of new Set([
+      Math.floor((p.y - half) / TILE_PX),
+      Math.floor((p.y + half) / TILE_PX),
+    ])) {
+      tiles.push({
+        key: `${tx}/${ty}`,
+        url: courseTileUrl(THUMB_ZOOM, tx, ty),
+        x: (tx * TILE_PX - (p.x - half)) * scale,
+        y: (ty * TILE_PX - (p.y - half)) * scale,
+      });
+    }
+  }
+  return { tiles, tileSize: TILE_PX * scale };
 }
 
 /** A golf flag planted at (cx, cy): shadow, pole and pennant. */
@@ -803,8 +853,13 @@ function FlagPin({ cx, cy, color }: { cx: number; cy: number; color: string }) {
   );
 }
 
-/** Floating box above a flag with the course name and its status. */
+/**
+ * Floating box above a flag: a satellite thumbnail of the course on the
+ * left, with its name and status set against the thumbnail's right edge.
+ * Where the tiles can't load, a green disc with a flag stands in.
+ */
 function Callout({
+  id,
   x,
   y,
   w,
@@ -812,7 +867,10 @@ function Callout({
   label,
   detail,
   color,
+  longitude,
+  latitude,
 }: {
+  id: string;
   x: number;
   y: number;
   w: number;
@@ -820,7 +878,13 @@ function Callout({
   label: string;
   detail: string;
   color: string;
+  longitude: number;
+  latitude: number;
 }) {
+  const tx = x + THUMB_INSET;
+  const ty = y + THUMB_INSET;
+  const clipId = `thumb-${id}`;
+  const { tiles, tileSize } = thumbTiles(longitude, latitude, THUMB);
   return (
     <G>
       <Rect
@@ -833,25 +897,50 @@ function Callout({
         stroke={GLOBE_COLORS.calloutEdge}
         strokeWidth={1}
       />
+      <Defs>
+        <ClipPath id={clipId}>
+          <Rect x={tx} y={ty} width={THUMB} height={THUMB} rx={8} />
+        </ClipPath>
+      </Defs>
+      <G clipPath={`url(#${clipId})`}>
+        <Rect x={tx} y={ty} width={THUMB} height={THUMB} fill="hsl(150, 30%, 16%)" />
+        <Path
+          d={`M${tx + 15} ${ty + 23} v-12 l8 3 l-8 3`}
+          fill="none"
+          stroke="hsla(0, 0%, 100%, 0.7)"
+          strokeWidth={1.4}
+        />
+        {tiles.map((t) => (
+          <SvgImage
+            key={t.key}
+            href={{ uri: t.url }}
+            x={tx + t.x}
+            y={ty + t.y}
+            width={tileSize}
+            height={tileSize}
+            preserveAspectRatio="none"
+          />
+        ))}
+      </G>
       <SvgText
-        x={x + w / 2}
+        x={x + CALLOUT_TEXT_X}
         y={y + 18}
         fill={GLOBE_COLORS.pinLabel}
         fontSize={CALLOUT_NAME_SIZE}
         fontFamily="Manrope_600SemiBold"
         fontWeight="600"
-        textAnchor="middle"
+        textAnchor="start"
       >
         {label}
       </SvgText>
       <SvgText
-        x={x + w / 2}
+        x={x + CALLOUT_TEXT_X}
         y={y + 33}
         fill={color}
         fontSize={CALLOUT_DETAIL_SIZE}
         fontFamily="Manrope_600SemiBold"
         fontWeight="600"
-        textAnchor="middle"
+        textAnchor="start"
       >
         {detail}
       </SvgText>
