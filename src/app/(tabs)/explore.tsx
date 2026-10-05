@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CourseCard } from '@/components/course-card';
+import { HorizontalScroll } from '@/components/horizontal-scroll';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
@@ -91,7 +92,7 @@ export default function ExploreScreen() {
               </Text>
             </View>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <HorizontalScroll>
               <View className="flex-row gap-2">
                 {wished.map((c) => (
                   <WishCard
@@ -103,14 +104,14 @@ export default function ExploreScreen() {
                   />
                 ))}
               </View>
-            </ScrollView>
+            </HorizontalScroll>
           )}
         </View>
       )}
 
       {/* Region chips */}
       {!query && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <HorizontalScroll>
           <View className="flex-row gap-2">
             {EXPLORE_REGIONS.map((r) => (
               <Pressable
@@ -132,7 +133,7 @@ export default function ExploreScreen() {
               </Pressable>
             ))}
           </View>
-        </ScrollView>
+        </HorizontalScroll>
       )}
 
       <Text className="text-xs text-muted-foreground">
