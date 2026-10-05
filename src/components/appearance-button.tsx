@@ -29,7 +29,6 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 /** The four shading levels, as circles under the appearance switch. */
 const LEVEL_ICONS: Record<Exclude<CoverageLevel, 'off'>, IconName> = {
-  cities: 'pin',
   states: 'map',
   countries: 'flag',
   continents: 'earth',
@@ -37,8 +36,8 @@ const LEVEL_ICONS: Record<Exclude<CoverageLevel, 'off'>, IconName> = {
 
 /**
  * The round layer button in the top right, in the style of Google Earth's: a
- * thumbnail of the look currently on screen. Pressing it fans out five circles
- * underneath: that other look, then the four "where I've played" shading
+ * thumbnail of the look currently on screen. Pressing it fans out four circles
+ * underneath: that other look, then the three "where I've played" shading
  * levels, each a toggle. A tap anywhere else closes the fan.
  */
 export function AppearanceButton({

@@ -1,4 +1,4 @@
-import { geoBounds, geoCircle, geoContains } from 'd3-geo';
+import { geoBounds, geoContains } from 'd3-geo';
 import * as topojson from 'topojson-client';
 import countries110m from 'world-atlas/countries-110m.json';
 
@@ -11,14 +11,12 @@ import { Continent, Course } from '@/models/types';
  *
  * Boundary data is bundled where it exists in a sensible size: countries for
  * the whole world (Natural Earth, via world-atlas) and states for the US
- * (Census Bureau, via us-atlas). Cities have no usable outlines, so a city is
- * a soft disc around the course.
+ * (Census Bureau, via us-atlas).
  */
-export type CoverageLevel = 'off' | 'cities' | 'states' | 'countries' | 'continents';
+export type CoverageLevel = 'off' | 'states' | 'countries' | 'continents';
 
 export const COVERAGE_LEVELS: { id: CoverageLevel; label: string }[] = [
   { id: 'off', label: 'Off' },
-  { id: 'cities', label: 'Cities' },
   { id: 'states', label: 'US states' },
   { id: 'countries', label: 'Countries' },
   { id: 'continents', label: 'Continents' },
@@ -33,9 +31,6 @@ const COUNTRIES = topojson.feature(
 ) as unknown as GeoJSON.FeatureCollection;
 
 const CONTINENT_BY_ID = countryContinents as Record<string, Continent>;
-
-/** City disc radius in degrees of arc (1° ≈ 111 km). */
-const CITY_RADIUS = 0.12;
 
 // US states are parsed on first use.
 let statesCache: GeoJSON.FeatureCollection | null = null;
@@ -87,15 +82,6 @@ function lookup(
   return cache.get(course.id) ?? null;
 }
 
-function disc(course: Course, radius: number): Feature {
-  const { longitude, latitude } = course.coordinate;
-  return {
-    type: 'Feature',
-    properties: { id: course.id },
-    geometry: geoCircle().center([longitude, latitude]).radius(radius)(),
-  };
-}
-
 const isUS = (course: Course) => course.country === 'United States of America';
 
 /**
@@ -128,15 +114,11 @@ export function coverageShapes(level: CoverageLevel, courses: Course[]): Feature
     case 'states':
       for (const c of courses) if (isUS(c)) add(lookup(containingState, usStates, c));
       return out;
-    case 'cities':
-      for (const c of courses) add(disc(c, CITY_RADIUS));
-      return out;
   }
 }
 
 /** A caveat worth showing next to the picker for some levels. */
 export function coverageNote(level: CoverageLevel): string | null {
-  if (level === 'cities') return 'An area around each course';
   if (level === 'states') return 'US courses only';
   return null;
 }
