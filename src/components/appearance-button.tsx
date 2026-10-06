@@ -45,12 +45,19 @@ export function AppearanceButton({
 }) {
   const button = useRef<View>(null);
   const [anchor, setAnchor] = useState<{ right: number; top: number } | null>(null);
+  // Closing plays the opening in reverse before the modal goes.
+  const [closing, setClosing] = useState(false);
   const current = LOOKS.find((l) => l.id === appearance) ?? LOOKS[0];
 
   const open = () => {
+    setClosing(false);
     button.current?.measureInWindow((x, y, w, h) => setAnchor({ right: x + w, top: y + h + GAP }));
   };
-  const close = () => setAnchor(null);
+  const close = () => setClosing(true);
+  const closed = () => {
+    setAnchor(null);
+    setClosing(false);
+  };
 
   return (
     <>
@@ -70,7 +77,7 @@ export function AppearanceButton({
       <Modal visible={anchor !== null} transparent animationType="none" onRequestClose={close}>
         <Pressable className="flex-1" onPress={close} accessibilityLabel="Close">
           {anchor && (
-            <Fan anchor={anchor}>
+            <Fan anchor={anchor} closing={closing} onClosed={closed}>
               {LOOKS.map((look, i) => {
                 const selected = appearance === look.id;
                 return (
@@ -115,19 +122,38 @@ const thumbStyle = {
   boxShadow: '0 4px 14px rgba(0, 0, 0, 0.45)',
 };
 
-/** The column of circles, right-aligned under the button, unfolding as it opens. */
+/**
+ * The column of circles, right-aligned under the button. It unrolls as it
+ * opens and rolls back up the same way when closing, then reports it's gone.
+ */
 function Fan({
   anchor,
+  closing,
+  onClosed,
   children,
 }: {
   anchor: { right: number; top: number };
+  closing: boolean;
+  onClosed: () => void;
   children: ReactNode;
 }) {
   const { width } = useWindowDimensions();
   const [progress] = useState(() => new Animated.Value(0));
+  const onClosedRef = useRef(onClosed);
   useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration: OPEN_MS, useNativeDriver: true }).start();
-  }, [progress]);
+    onClosedRef.current = onClosed;
+  }, [onClosed]);
+  useEffect(() => {
+    const animation = Animated.timing(progress, {
+      toValue: closing ? 0 : 1,
+      duration: OPEN_MS,
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (closing && finished) onClosedRef.current();
+    });
+    return () => animation.stop();
+  }, [progress, closing]);
   return (
     <FanProgress.Provider value={progress}>
       <View
