@@ -16,6 +16,8 @@ const PILL_INSET = 8;
 const ACTIVE_HEIGHT = TAB_BAR_HEIGHT - PILL_INSET * 2;
 /** How far the pill stretches while in flight, as a multiple of its width. */
 const STRETCH = 1.35;
+/** Diameter of the filled disc behind a prominent slot's icon. */
+const PROMINENT_SIZE = ACTIVE_HEIGHT - 8;
 
 /** Gap between the pill and the bottom of the screen, on the 4px grid. */
 export function barOffset(bottomInset: number): number {
@@ -87,6 +89,8 @@ export type PillSlot = {
   role?: 'tab' | 'button';
   /** Overrides the icon colour, for a slot that signals state. */
   color?: string;
+  /** Sets the icon on a raised, filled disc so it reads as the bar's one action. */
+  prominent?: boolean;
   /** Drawn over the icon's corner: a live dot, a count. */
   badge?: ReactNode;
 };
@@ -172,11 +176,27 @@ export function LiquidPillBar({ slots, activeSlot }: Props) {
                 className="items-center justify-center self-stretch"
                 style={{ height: ACTIVE_HEIGHT }}
               >
-                <Ionicons
-                  name={s.icon}
-                  size={25}
-                  color={s.color ?? (focused ? NAV_COLORS.iconActive : NAV_COLORS.icon)}
-                />
+                {s.prominent ? (
+                  <View
+                    style={{
+                      width: PROMINENT_SIZE,
+                      height: PROMINENT_SIZE,
+                      borderRadius: PROMINENT_SIZE / 2,
+                      backgroundColor: NAV_COLORS.prominent,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)',
+                    }}
+                  >
+                    <Ionicons name={s.icon} size={24} color={s.color ?? NAV_COLORS.prominentIcon} />
+                  </View>
+                ) : (
+                  <Ionicons
+                    name={s.icon}
+                    size={25}
+                    color={s.color ?? (focused ? NAV_COLORS.iconActive : NAV_COLORS.icon)}
+                  />
+                )}
                 {s.badge}
               </View>
             </Pressable>

@@ -148,4 +148,7 @@ export const NAV_COLORS = {
   active: '#032a1c',
   // Dot on the club icon while a round is being recorded.
   live: 'hsl(68, 92%, 60%)',
+  // The raised disc behind the + in the middle, and the glyph on it.
+  prominent: 'hsl(158, 55%, 46%)',
+  prominentIcon: '#032a1c',
 };

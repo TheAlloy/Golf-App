@@ -56,7 +56,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
         icon: 'golf',
         label: 'Back to your round',
         role: 'button',
-        color: NAV_COLORS.iconActive,
+        prominent: true,
         onPress: () => router.push('/play'),
         badge: (
           <View
@@ -66,8 +66,8 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
               width: 8,
               height: 8,
               right: '50%',
-              marginRight: -16,
-              top: 8,
+              marginRight: -20,
+              top: 4,
               backgroundColor: NAV_COLORS.live,
               borderWidth: 1.5,
               borderColor: NAV_COLORS.pill,
@@ -77,9 +77,10 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
       }
     : {
         key: 'new',
-        icon: 'add-circle-outline',
+        icon: 'add',
         label: 'New round',
         role: 'button',
+        prominent: true,
         onPress: () => setStartOpen(true),
       };
 
