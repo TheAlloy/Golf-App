@@ -17,7 +17,7 @@ const ACTIVE_HEIGHT = TAB_BAR_HEIGHT - PILL_INSET * 2;
 /** How far the pill stretches while in flight, as a multiple of its width. */
 const STRETCH = 1.35;
 /** Diameter of the filled disc behind a prominent slot's icon. */
-const PROMINENT_SIZE = ACTIVE_HEIGHT - 8;
+const PROMINENT_SIZE = ACTIVE_HEIGHT;
 
 /** Gap between the pill and the bottom of the screen, on the 4px grid. */
 export function barOffset(bottomInset: number): number {
