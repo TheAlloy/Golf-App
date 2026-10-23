@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckInSheet } from '@/components/check-in-sheet';
-import { LiquidPillBar, PillSlot, useTabBarSpace } from '@/components/liquid-pill-bar';
+import { barOffset, LiquidPillBar, PillSlot, useTabBarSpace } from '@/components/liquid-pill-bar';
 import LiveMap from '@/components/live/live-map';
 import LiveScorecard from '@/components/live/live-scorecard';
 import { Text } from '@/components/ui/text';
@@ -36,6 +36,7 @@ export default function PlayScreen() {
   const setLivePar = useAppStore((s) => s.setLivePar);
   const [tab, setTab] = useState<Tab>('map');
   const [tagOpen, setTagOpen] = useState(false);
+  const [exitOpen, setExitOpen] = useState(false);
   const bottomSpace = useTabBarSpace();
   // Your "playing here" tag for this course, if you've posted one.
   const myTag = useMyCheckIn(live?.courseId);
@@ -46,13 +47,14 @@ export default function PlayScreen() {
   if (!live || !course) return <Redirect href="/" />;
 
   const topSpace = insets.top + HEADER_HEIGHT;
+  const scoredHoles = (live.scores.me ?? []).filter((v) => v !== undefined).length;
   const hole = live.currentHole;
   const par = liveHolePar(course, live, hole);
   // Catalogue par can't be changed; a par you set yourself cycles 3, 4, 5.
   const parEditable = course.holePars?.[hole - 1] === undefined;
   const cyclePar = () => setLivePar(hole, par === undefined ? 4 : par >= 5 ? 3 : par + 1);
 
-  const exit = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const leave = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const finish = () => {
     const round = finishLiveRound();
     if (round) router.replace({ pathname: '/round/[id]', params: { id: round.id } });
@@ -66,7 +68,13 @@ export default function PlayScreen() {
   const slots: PillSlot[] = [
     { key: 'map', icon: 'map-outline', label: 'Map', onPress: () => setTab('map') },
     { key: 'card', icon: 'list-outline', label: 'Scorecard', onPress: () => setTab('card') },
-    { key: 'exit', icon: 'exit-outline', label: 'Exit', role: 'button', onPress: exit },
+    {
+      key: 'exit',
+      icon: 'exit-outline',
+      label: 'Exit',
+      role: 'button',
+      onPress: () => setExitOpen(true),
+    },
   ];
 
   return (
@@ -185,6 +193,63 @@ export default function PlayScreen() {
 
       <LiquidPillBar slots={slots} activeSlot={tab === 'map' ? 0 : 1} />
 
+      {/* Exit: step away with the round still live, or end it here and now. */}
+      <Modal
+        visible={exitOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExitOpen(false)}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/60"
+          onPress={() => setExitOpen(false)}
+          accessibilityLabel="Close"
+        >
+          <Pressable
+            className="gap-2 rounded-3xl border border-border bg-elevated p-4"
+            style={{ marginHorizontal: 16, marginBottom: barOffset(insets.bottom) }}
+            onPress={() => {}}
+            accessibilityViewIsModal
+          >
+            <Text className="font-bold text-lg text-foreground">Leave the round?</Text>
+            <Text className="mb-2 text-sm text-muted-foreground">
+              {scoredHoles > 0
+                ? `${scoredHoles} of ${live.holesPlayed} holes scored.`
+                : 'Nothing scored yet.'}
+            </Text>
+            <ExitOption
+              icon="golf-outline"
+              title="Keep playing"
+              body="Go back home; the club in the nav bar brings you back here."
+              onPress={() => {
+                setExitOpen(false);
+                leave();
+              }}
+              primary
+            />
+            <ExitOption
+              icon="checkmark-circle-outline"
+              title="Finish and save"
+              body="Save what's on the card as a round, points and all."
+              onPress={() => {
+                setExitOpen(false);
+                finish();
+              }}
+            />
+            <ExitOption
+              icon="trash-outline"
+              title="Discard round"
+              body="Throw the card away. This can't be undone."
+              onPress={() => {
+                setExitOpen(false);
+                discard();
+              }}
+              destructive
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <CheckInSheet
         visible={tagOpen}
         onClose={() => setTagOpen(false)}
@@ -198,5 +263,52 @@ export default function PlayScreen() {
         }
       />
     </View>
+  );
+}
+
+/** One way out of the round: an icon, what it does, and a line on what that means. */
+function ExitOption({
+  icon,
+  title,
+  body,
+  onPress,
+  primary,
+  destructive,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  body: string;
+  onPress: () => void;
+  primary?: boolean;
+  destructive?: boolean;
+}) {
+  const tint = primary
+    ? colors.primaryForeground
+    : destructive
+      ? colors.destructive
+      : colors.foreground;
+  return (
+    <Pressable
+      className={
+        primary
+          ? 'flex-row items-center gap-3 rounded-2xl bg-primary p-4 active:opacity-80'
+          : 'flex-row items-center gap-3 rounded-2xl bg-card p-4 active:opacity-80'
+      }
+      onPress={onPress}
+      accessibilityRole="button"
+    >
+      <Ionicons name={icon} size={20} color={tint} />
+      <View className="flex-1">
+        <Text className="font-semibold text-base" style={{ color: tint }}>
+          {title}
+        </Text>
+        <Text
+          className="text-xs"
+          style={{ color: primary ? 'rgba(255, 255, 255, 0.8)' : colors.mutedForeground }}
+        >
+          {body}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
