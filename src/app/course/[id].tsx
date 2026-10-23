@@ -1,7 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { CheckInSheet } from '@/components/check-in-sheet';
+import { PlayingNowList } from '@/components/playing-now';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -9,7 +11,7 @@ import { WishlistButton } from '@/components/wishlist-button';
 import { coursePoints, repeatPlayPoints } from '@/lib/points';
 import { wishReward } from '@/lib/progression';
 import { wishlistProgress } from '@/lib/wishlist';
-import { useAppStore, useCourse } from '@/store/use-app-store';
+import { useAppStore, useCourse, useShowingCheckIns } from '@/store/use-app-store';
 
 export default function CourseDetailScreen() {
   const router = useRouter();
@@ -19,6 +21,9 @@ export default function CourseDetailScreen() {
   const friends = useAppStore((s) => s.friends);
   const allRounds = useAppStore((s) => s.rounds);
   const wishlist = useAppStore((s) => s.wishlist);
+  // Who's playing here, or about to.
+  const here = useShowingCheckIns().filter((c) => c.courseId === id);
+  const [tagOpen, setTagOpen] = useState(false);
   const wish = useMemo(
     () =>
       wishlistProgress(
@@ -90,12 +95,26 @@ export default function CourseDetailScreen() {
           </CardContent>
         </Card>
 
-        <Button
-          variant="outline"
-          onPress={() => router.push({ pathname: '/log-round', params: { courseId: course.id } })}
-        >
-          <Text>+ Log a round here</Text>
-        </Button>
+        <View className="flex-row gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onPress={() => router.push({ pathname: '/log-round', params: { courseId: course.id } })}
+          >
+            <Text>+ Log a round</Text>
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onPress={() => setTagOpen(true)}
+            accessibilityLabel="Tag yourself here"
+          >
+            <Text>{here.some((c) => c.by === 'me') ? 'Tagged here' : 'Tag me here'}</Text>
+          </Button>
+        </View>
+
+        <PlayingNowList checkIns={here} showCourse={false} />
+        <CheckInSheet visible={tagOpen} onClose={() => setTagOpen(false)} courseId={course.id} />
 
         <Text className="mt-4 font-semibold text-sm">Rounds</Text>
         {rounds.length === 0 && (

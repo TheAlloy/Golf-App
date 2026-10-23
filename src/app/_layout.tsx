@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 
 import { HeaderBack } from '@/components/header-back';
 import { colors } from '@/constants/theme';
+import { usePresenceSync } from '@/lib/presence';
 import { installOverlayScrollbars } from '@/lib/scrollbars';
 
 SplashScreen.preventAutoHideAsync();
@@ -30,6 +31,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
+  // Friends' "playing here" tags, when a backend is configured.
+  usePresenceSync();
 
   if (!fontsLoaded) return null;
 

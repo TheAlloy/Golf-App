@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
+  Easing,
   GestureResponderEvent,
   PanResponder,
   Platform,
@@ -135,11 +136,26 @@ export type GlobeMarker = {
   latitude: number;
   longitude: number;
   label: string;
-  /** Played courses pin in green; wishlisted ones in lime yellow. */
-  kind?: 'played' | 'wishlist';
+  /**
+   * Played courses pin in green; wishlisted ones in lime yellow. A live
+   * marker is someone playing there: an avatar disc in their colour.
+   */
+  kind?: 'played' | 'wishlist' | 'live';
   /** Status line for the close-up callout, e.g. "Played · 3 rounds". */
   detail?: string;
+  /** Live markers: the player's colour and initial. */
+  color?: string;
+  initials?: string;
+  /** Live markers: on the course right now (pulses), or teeing off later. */
+  pulse?: boolean;
 };
+
+/** Where to turn the globe, with a key so the same spot can be asked for twice. */
+export type GlobeFocus = { longitude: number; latitude: number; key: number };
+/** How long the globe takes to swing round to a focus. */
+const FOCUS_MS = 600;
+/** One beat of a live marker's pulse. */
+const PULSE_MS = 1800;
 
 /** Length of the dissolve between the map and terrain looks. */
 const APPEARANCE_FADE_MS = 240;
@@ -169,6 +185,8 @@ type Props = {
   appearance?: 'map' | 'satellite' | 'terrain';
   /** Streamed-imagery state, for the attribution chip in satellite and terrain views. */
   onImageryStatus?: (status: ImageryStatus) => void;
+  /** Swing round to face this spot whenever it changes. */
+  focus?: GlobeFocus | null;
 };
 
 export default function Globe({
@@ -182,6 +200,7 @@ export default function Globe({
   initialCentre = null,
   appearance = 'map',
   onImageryStatus,
+  focus = null,
 }: Props) {
   // Satellite and terrain are both drawn by the GL layer; the map is not.
   const terrain = appearance !== 'map';
@@ -303,6 +322,49 @@ export default function Globe({
     gestureStart.current = next;
     setRotation(next);
   }, [initialCentre]);
+
+  // Swing to a focus: ease the rotation there the short way round.
+  useEffect(() => {
+    if (!focus) return;
+    const from = rotationRef.current;
+    const to: [number, number] = [-focus.longitude, -focus.latitude];
+    let dl = to[0] - from[0];
+    dl = ((((dl + 180) % 360) + 360) % 360) - 180;
+    const dp = to[1] - from[1];
+    const started = Date.now();
+    let frame = 0;
+    const step = () => {
+      const t = Math.min(1, (Date.now() - started) / FOCUS_MS);
+      const e = 1 - Math.pow(1 - t, 3);
+      const next: [number, number] = [from[0] + dl * e, from[1] + dp * e];
+      rotationRef.current = next;
+      gestureStart.current = next;
+      setRotation(next);
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.key]);
+
+  // Live markers breathe: one shared ring that grows and fades, round and round.
+  const anyPulse = markers.some((m) => m.kind === 'live' && m.pulse);
+  const [pulse] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!anyPulse) return;
+    const loop = Animated.loop(
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: PULSE_MS,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anyPulse, pulse]);
+  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [5, 22] });
+  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] });
 
   /**
    * Set zoom to `next` at once, keeping whatever is under (fx, fy) in place,
@@ -656,6 +718,9 @@ export default function Globe({
           cy: xy[1],
           longitude: m.longitude,
           latitude: m.latitude,
+          color: m.color,
+          initials: m.initials,
+          pulse: !!m.pulse,
         };
       })
       .filter((d): d is NonNullable<typeof d> => d !== null);
@@ -777,6 +842,21 @@ export default function Globe({
           })}
 
           {pins.map((p) => {
+            if (p.kind === 'live') {
+              return (
+                <LivePin
+                  key={p.id}
+                  cx={p.cx}
+                  cy={p.cy}
+                  color={p.color ?? pal.live}
+                  initials={p.initials ?? ''}
+                  big={zoom >= 3}
+                  pulse={p.pulse}
+                  pulseR={pulseR}
+                  pulseOpacity={pulseOpacity}
+                />
+              );
+            }
             const color = p.kind === 'wishlist' ? pal.wishlist : pal.pin;
             if (p.callout) return <FlagPin key={p.id} cx={p.cx} cy={p.cy} color={color} />;
             return (
@@ -816,7 +896,18 @@ export default function Globe({
                 longitude={p.longitude}
                 latitude={p.latitude}
                 detail={p.detail}
-                color={p.kind === 'wishlist' ? pal.wishlist : pal.pin}
+                color={
+                  p.kind === 'live'
+                    ? (p.color ?? pal.live)
+                    : p.kind === 'wishlist'
+                      ? pal.wishlist
+                      : pal.pin
+                }
+                avatar={
+                  p.kind === 'live'
+                    ? { color: p.color ?? pal.live, initials: p.initials ?? '' }
+                    : null
+                }
               />
             ) : null
           )}
@@ -880,6 +971,72 @@ function thumbTiles(longitude: number, latitude: number, size: number) {
   return { tiles, tileSize: TILE_PX * scale };
 }
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/**
+ * Someone playing at (cx, cy): a disc in their colour with their initial,
+ * ringed by a pulse while they're out on the course. Up close it stands on
+ * a short stem under its callout, like a flag does.
+ */
+function LivePin({
+  cx,
+  cy,
+  color,
+  initials,
+  big,
+  pulse,
+  pulseR,
+  pulseOpacity,
+}: {
+  cx: number;
+  cy: number;
+  color: string;
+  initials: string;
+  big: boolean;
+  pulse: boolean;
+  pulseR: Animated.AnimatedInterpolation<number>;
+  pulseOpacity: Animated.AnimatedInterpolation<number>;
+}) {
+  const r = big ? 8 : 4.5;
+  const y = big ? cy - 10 : cy;
+  return (
+    <G>
+      {pulse && (
+        <AnimatedCircle
+          cx={cx}
+          cy={y}
+          r={pulseR}
+          fill="none"
+          stroke={color}
+          strokeWidth={1.5}
+          opacity={pulseOpacity}
+        />
+      )}
+      {big && (
+        <>
+          <Ellipse cx={cx} cy={cy} rx={3} ry={1.2} fill="#000" opacity={0.45} />
+          <Line x1={cx} y1={cy} x2={cx} y2={y} stroke={GLOBE_COLORS.pinLabel} strokeWidth={1.2} />
+        </>
+      )}
+      <Circle cx={cx} cy={y} r={r + 1.2} fill="rgba(0, 0, 0, 0.55)" />
+      <Circle cx={cx} cy={y} r={r} fill={color} stroke="#fff" strokeWidth={big ? 1.2 : 0.8} />
+      {big && (
+        <SvgText
+          x={cx}
+          y={y + 3.2}
+          fill="#06240f"
+          fontSize={9}
+          fontFamily="Manrope_700Bold"
+          fontWeight="700"
+          textAnchor="middle"
+        >
+          {initials}
+        </SvgText>
+      )}
+    </G>
+  );
+}
+
 /** A golf flag planted at (cx, cy): shadow, pole and pennant. */
 function FlagPin({ cx, cy, color }: { cx: number; cy: number; color: string }) {
   const top = cy - POLE;
@@ -920,6 +1077,7 @@ function Callout({
   color,
   longitude,
   latitude,
+  avatar,
 }: {
   id: string;
   x: number;
@@ -931,11 +1089,15 @@ function Callout({
   color: string;
   longitude: number;
   latitude: number;
+  /** For someone playing here: their disc stands in for the thumbnail. */
+  avatar: { color: string; initials: string } | null;
 }) {
   const tx = x + THUMB_INSET;
   const ty = y + THUMB_INSET;
   const clipId = `thumb-${id}`;
-  const { tiles, tileSize } = thumbTiles(longitude, latitude, THUMB);
+  const { tiles, tileSize } = avatar
+    ? { tiles: [], tileSize: 0 }
+    : thumbTiles(longitude, latitude, THUMB);
   return (
     <G>
       <Rect
@@ -948,31 +1110,51 @@ function Callout({
         stroke={GLOBE_COLORS.calloutEdge}
         strokeWidth={1}
       />
-      <Defs>
-        <ClipPath id={clipId}>
-          <Rect x={tx} y={ty} width={THUMB} height={THUMB} rx={8} />
-        </ClipPath>
-      </Defs>
-      <G clipPath={`url(#${clipId})`}>
-        <Rect x={tx} y={ty} width={THUMB} height={THUMB} fill="hsl(150, 30%, 16%)" />
-        <Path
-          d={`M${tx + 15} ${ty + 23} v-12 l8 3 l-8 3`}
-          fill="none"
-          stroke="hsla(0, 0%, 100%, 0.7)"
-          strokeWidth={1.4}
-        />
-        {tiles.map((t) => (
-          <SvgImage
-            key={t.key}
-            href={{ uri: t.url }}
-            x={tx + t.x}
-            y={ty + t.y}
-            width={tileSize}
-            height={tileSize}
-            preserveAspectRatio="none"
-          />
-        ))}
-      </G>
+      {avatar && (
+        <G>
+          <Circle cx={tx + THUMB / 2} cy={ty + THUMB / 2} r={THUMB / 2} fill={avatar.color} />
+          <SvgText
+            x={tx + THUMB / 2}
+            y={ty + THUMB / 2 + 5}
+            fill="#06240f"
+            fontSize={14}
+            fontFamily="Manrope_700Bold"
+            fontWeight="700"
+            textAnchor="middle"
+          >
+            {avatar.initials}
+          </SvgText>
+        </G>
+      )}
+      {!avatar && (
+        <>
+          <Defs>
+            <ClipPath id={clipId}>
+              <Rect x={tx} y={ty} width={THUMB} height={THUMB} rx={8} />
+            </ClipPath>
+          </Defs>
+          <G clipPath={`url(#${clipId})`}>
+            <Rect x={tx} y={ty} width={THUMB} height={THUMB} fill="hsl(150, 30%, 16%)" />
+            <Path
+              d={`M${tx + 15} ${ty + 23} v-12 l8 3 l-8 3`}
+              fill="none"
+              stroke="hsla(0, 0%, 100%, 0.7)"
+              strokeWidth={1.4}
+            />
+            {tiles.map((t) => (
+              <SvgImage
+                key={t.key}
+                href={{ uri: t.url }}
+                x={tx + t.x}
+                y={ty + t.y}
+                width={tileSize}
+                height={tileSize}
+                preserveAspectRatio="none"
+              />
+            ))}
+          </G>
+        </>
+      )}
       <SvgText
         x={x + CALLOUT_TEXT_X}
         y={y + 18}

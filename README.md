@@ -22,6 +22,13 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
   to four players, tapped in hole by hole with Out/In/totals and to-par.
   _Exit_ returns home with the round still live; _Finish_ saves it as a
   round so points and badges follow. See "Live round" below.
+- **Playing now** — tag yourself at a course, with a tee time and the
+  friends you're playing with, from the live round's header or a course
+  page. Friends see it on their globe as a pulsing disc in your colour with
+  a callout (_Sam with Alex · playing since 9:12_), as chips above the globe
+  that spin it to the spot, and on the course page. Tags come down on their
+  own five hours after the tee time, or when the live round ends. See
+  "Playing now" below.
 - **Globe** (Home) — an orthographic world globe (d3-geo + SVG) that
   starts dark and marks every course you have played in green and every
   wishlisted one in lime yellow. A thumbnail in the top right switches to a
@@ -121,6 +128,27 @@ globe's, configured with `EXPO_PUBLIC_COURSE_TILES`, `_MAX_ZOOM`,
 `_TILE_SIZE` and `_ATTRIBUTION`; any XYZ satellite provider works. When
 tiles can't be fetched the map falls back to a plain ground with a 50 m
 grid so distances still read.
+
+### Playing now
+
+A tag records who, where, when and with whom (`CheckIn` in
+`src/models/types.ts`), and is posted from the **Tag** button in the live
+round header (whoever is on the scorecard comes pre-ticked) or **Tag me
+here** on a course page. Tee times are picked from chips (now, in an hour,
+tomorrow morning…); friends who aren't on the app yet can be typed in by
+name. On the globe a tag is an avatar disc in the player's colour, pulsing
+while they're out on the course, with the usual callout up close; the chips
+under the Map/List toggle list everyone out playing and swing the globe to
+them. The Friends screen shows where each friend is playing too.
+
+Tags travel between friends through the backend: with
+`EXPO_PUBLIC_SUPABASE_URL` and `_ANON_KEY` set and the user signed in,
+`src/lib/presence.ts` posts your tags to the `check_ins` table and pulls
+your friends' (row-level security limits reads to accepted friends and
+anyone tagged), live over realtime and every five minutes. The schema is
+`supabase/migrations/0002_check_ins.sql`. Without a backend the app stays
+local-first: your own tags show on your globe, and friends' tags appear
+once accounts are linked.
 
 ### Satellite imagery
 

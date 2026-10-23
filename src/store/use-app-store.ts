@@ -1,10 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { findCatalogueCourse } from '@/data/course-catalogue';
+import { CHECK_IN_HOURS, isShowing } from '@/lib/check-ins';
 import {
+  CheckIn,
+  CheckInPerson,
   Course,
   Friend,
   LatLng,
@@ -38,6 +41,8 @@ type AppState = {
    * a course only has to be marked up once.
    */
   courseFlags: Record<string, Record<number, LatLng>>;
+  /** "Playing here" tags: yours, and the ones friends have posted. */
+  checkIns: CheckIn[];
 
   addCustomCourse: (input: {
     name: string;
@@ -66,7 +71,27 @@ type AppState = {
   /** Save your card as a round and clear the live round. Returns the saved round. */
   finishLiveRound: () => Round | null;
   discardLiveRound: () => void;
+
+  /** Tag yourself at a course, with whoever you're playing with. */
+  addCheckIn: (input: {
+    courseId: string;
+    startsAt?: Date;
+    with?: CheckInPerson[];
+    note?: string;
+  }) => CheckIn | null;
+  /** Take a tag of yours down now. */
+  endCheckIn: (checkInId: string) => void;
+  /** Replace the friends' tags with the latest from the backend. */
+  receiveCheckIns: (theirs: CheckIn[]) => void;
 };
+
+/** How your own tag pin is coloured, for you and for friends who see it. */
+export const MY_CHECK_IN_COLOR = 'hsl(158, 55%, 46%)';
+
+/** Your tags at a course, taken down: the round there is over. */
+function endMine(checkIns: CheckIn[], courseId: string): CheckIn[] {
+  return checkIns.filter((c) => !(c.by === 'me' && c.courseId === courseId));
+}
 
 /** How many can share a live card. */
 export const MAX_LIVE_PLAYERS = 4;
@@ -82,6 +107,7 @@ export const useAppStore = create<AppState>()(
       profile: { name: 'Golfer' },
       liveRound: null,
       courseFlags: {},
+      checkIns: [],
 
       addCustomCourse: (input) => {
         const course: Course = {
@@ -295,22 +321,64 @@ export const useAppStore = create<AppState>()(
           photos: [],
           holeScores: played.length ? holeScores : undefined,
         });
-        set({ liveRound: null });
+        set({ liveRound: null, checkIns: endMine(get().checkIns, live.courseId) });
         return round;
       },
 
-      discardLiveRound: () => set({ liveRound: null }),
+      discardLiveRound: () =>
+        set((s) => ({
+          liveRound: null,
+          checkIns: s.liveRound ? endMine(s.checkIns, s.liveRound.courseId) : s.checkIns,
+        })),
+
+      addCheckIn: (input) => {
+        const course =
+          get().customCourses.find((c) => c.id === input.courseId) ??
+          findCatalogueCourse(input.courseId);
+        if (!course) return null;
+        const startsAt = input.startsAt ?? new Date();
+        const checkIn: CheckIn = {
+          id: makeId('tag'),
+          by: 'me',
+          byName: get().profile.name || 'You',
+          byColor: MY_CHECK_IN_COLOR,
+          courseId: course.id,
+          courseName: course.name,
+          coordinate: course.coordinate,
+          startsAt: startsAt.toISOString(),
+          endsAt: new Date(startsAt.getTime() + CHECK_IN_HOURS * 3600_000).toISOString(),
+          with: input.with ?? [],
+          note: input.note?.trim() || undefined,
+          createdAt: new Date().toISOString(),
+        };
+        // One tag per course at a time: a new one replaces yours there.
+        set((s) => ({
+          checkIns: [
+            checkIn,
+            ...s.checkIns.filter((c) => !(c.by === 'me' && c.courseId === course.id)),
+          ],
+        }));
+        return checkIn;
+      },
+
+      endCheckIn: (checkInId) =>
+        set((s) => ({ checkIns: s.checkIns.filter((c) => c.id !== checkInId) })),
+
+      receiveCheckIns: (theirs) =>
+        set((s) => ({ checkIns: [...s.checkIns.filter((c) => c.by === 'me'), ...theirs] })),
     }),
     {
       name: 'golf-app-store',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 4,
+      version: 5,
       migrate: (persisted, version) => {
         let state = persisted as Partial<AppState>;
         // v3 added the wishlist; older stores simply start with an empty one.
         if (version < 3) state = { ...state, wishlist: [] };
         // v4 added live rounds and remembered flag positions.
         if (version < 4) state = { ...state, liveRound: null, courseFlags: {} };
+        // v5 added "playing here" tags.
+        if (version < 5) state = { ...state, checkIns: [] };
         return state as AppState;
       },
     }
@@ -364,4 +432,25 @@ export function usePlayerData() {
     ...wishlist.map((w) => w.courseId),
   ]);
   return { rounds, wishlist, courses };
+}
+
+/**
+ * Tags on show right now: friends on a course, or teeing off soon, plus your
+ * own. Re-evaluated every minute so tags come and go on time.
+ */
+export function useShowingCheckIns(): CheckIn[] {
+  const checkIns = useAppStore((s) => s.checkIns);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => checkIns.filter((c) => isShowing(c)), [checkIns, tick]);
+}
+
+/** Your own tag at a course, if it's still up. */
+export function useMyCheckIn(courseId: string | undefined): CheckIn | undefined {
+  const showing = useShowingCheckIns();
+  return showing.find((c) => c.by === 'me' && c.courseId === courseId);
 }

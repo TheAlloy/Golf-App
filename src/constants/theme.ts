@@ -58,6 +58,8 @@ export const GLOBE_COLORS = {
   limb: 'hsl(0, 0%, 72%)',
   pin: 'hsl(158, 83%, 30%)',
   wishlist: 'hsl(68, 92%, 60%)',
+  /** Someone playing now, when they have no colour of their own. */
+  live: 'hsl(199, 89%, 58%)',
   pinLabel: 'hsl(0, 0%, 90%)',
   callout: 'hsla(0, 0%, 6%, 0.92)',
   calloutEdge: 'hsla(0, 0%, 100%, 0.12)',

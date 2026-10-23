@@ -5,19 +5,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { Friend } from '@/models/types';
-import { useAppStore } from '@/store/use-app-store';
+import { checkInStatus, whenLabel } from '@/lib/check-ins';
+import { useAppStore, useShowingCheckIns } from '@/store/use-app-store';
 
 export default function FriendsScreen() {
   const friends = useAppStore((s) => s.friends);
   const rounds = useAppStore((s) => s.rounds);
   const addFriend = useAppStore((s) => s.addFriend);
   const removeFriend = useAppStore((s) => s.removeFriend);
+  const checkIns = useShowingCheckIns();
 
   const [name, setName] = useState('');
   const [handicap, setHandicap] = useState('');
 
   const roundsTogether = (friendId: string) =>
     rounds.filter((r) => r.playedWith.includes(friendId)).length;
+  /** Where a friend is playing, from their own tag or one that tags them. */
+  const playingAt = (friendId: string) =>
+    checkIns.find((c) => c.by === friendId || c.with.some((p) => p.friendId === friendId));
 
   const submit = () => {
     if (!name.trim()) return;
@@ -46,6 +51,16 @@ export default function FriendsScreen() {
           {f.handicap !== undefined ? `HCP ${f.handicap} · ` : ''}
           {roundsTogether(f.id)} rounds together
         </Text>
+        {(() => {
+          const tag = playingAt(f.id);
+          if (!tag) return null;
+          const now = checkInStatus(tag) === 'now';
+          return (
+            <Text className="text-xs text-primary-bright">
+              {now ? 'Playing' : 'Teeing off'} at {tag.courseName} · {whenLabel(tag)}
+            </Text>
+          );
+        })()}
       </View>
     </Pressable>
   );
@@ -66,7 +81,8 @@ export default function FriendsScreen() {
         </Button>
       </View>
 
-      <FlatList indicatorStyle="white"
+      <FlatList
+        indicatorStyle="white"
         data={friends}
         keyExtractor={(f) => f.id}
         renderItem={renderFriend}

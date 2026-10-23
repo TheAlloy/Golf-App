@@ -39,6 +39,8 @@ export type Friend = {
   name: string;
   handicap?: number;
   avatarColor: string;
+  /** Their account on the backend, once friends are linked to real profiles. */
+  profileId?: string;
 };
 
 /** Per-hole detail for a logged round. Index 0 is hole 1. */
@@ -134,4 +136,33 @@ export type LiveRound = {
   /** Par set by hand for holes the catalogue has no par for. Keys are hole numbers. */
   pars: Record<number, number>;
   units: 'yd' | 'm';
+};
+
+/** Someone tagged on a check-in: a friend, or just a name. */
+export type CheckInPerson = {
+  friendId?: string;
+  name: string;
+};
+
+/**
+ * A "playing here" tag: who is at which course, from when until when, and
+ * who they're playing with. Yours are posted for your friends; theirs
+ * arrive from the backend and show on your globe.
+ */
+export type CheckIn = {
+  id: string;
+  /** 'me' for your own tags; otherwise the friend who posted it. */
+  by: 'me' | string;
+  /** Snapshot of the poster's name and colour, so the tag draws without a lookup. */
+  byName: string;
+  byColor: string;
+  courseId: string;
+  courseName: string;
+  coordinate: LatLng;
+  /** ISO timestamps: tee time, and when the tag quietly ends. */
+  startsAt: string;
+  endsAt: string;
+  with: CheckInPerson[];
+  note?: string;
+  createdAt: string;
 };

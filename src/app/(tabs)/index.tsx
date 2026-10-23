@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Globe, { GlobeMarker, MIN_ZOOM } from '@/components/globe';
+import Globe, { FLAG_ZOOM, GlobeFocus, GlobeMarker, MIN_ZOOM } from '@/components/globe';
 import type { ImageryStatus } from '@/components/terrain-layer';
 import {
   APPEARANCE_BUTTON_SIZE,
@@ -20,6 +20,8 @@ import {
 } from '@/components/appearance-button';
 import { ProgressSummary } from '@/components/progress-summary';
 import { CoveragePicker } from '@/components/coverage-picker';
+import { HorizontalScroll } from '@/components/horizontal-scroll';
+import { PlayingNowList } from '@/components/playing-now';
 import { useLiquidSlot } from '@/components/liquid-pill-bar';
 import { useTabBarSpace } from '@/components/tab-bar';
 import { ScoreBadge } from '@/components/ui/score-badge';
@@ -31,12 +33,18 @@ import {
   GLOBE_RELIEF_COLORS,
   GLOBE_TERRAIN_COLORS,
 } from '@/constants/theme';
+import { checkInDetail, checkInStatus, initialsOf } from '@/lib/check-ins';
 import { cn } from '@/lib/cn';
 import { CoverageLevel, coverageShapes } from '@/lib/coverage';
 import { IMAGERY, IMAGERY_ENABLED, TERRAIN_ENABLED, TERRAIN_IMAGERY } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
-import { Course, Round } from '@/models/types';
-import { useAppStore, usePlayedCourseIds, usePlayerData } from '@/store/use-app-store';
+import { CheckIn, Course, Round } from '@/models/types';
+import {
+  useAppStore,
+  usePlayedCourseIds,
+  usePlayerData,
+  useShowingCheckIns,
+} from '@/store/use-app-store';
 
 type HomeView = 'map' | 'list';
 
@@ -112,6 +120,9 @@ export default function HomeScreen() {
   const [imagery, setImagery] = useState<ImageryStatus>('idle');
   const [summaryOpen, setSummaryOpen] = useState(false);
   const friendCount = useAppStore((s) => s.friends.length);
+  // Who's out playing: friends' tags and your own, newest tee time first.
+  const checkIns = useShowingCheckIns();
+  const [focus, setFocus] = useState<GlobeFocus | null>(null);
   // "Where I've played" shading; only the dark map draws it.
   const [coverageLevel, setCoverageLevel] = useState<CoverageLevel>('off');
   const showCoverage = view === 'map' && appearance === 'map';
@@ -161,6 +172,17 @@ export default function HomeScreen() {
 
   const markers: GlobeMarker[] = useMemo(
     () => [
+      ...checkIns.map((c) => ({
+        id: `live:${c.id}`,
+        latitude: c.coordinate.latitude,
+        longitude: c.coordinate.longitude,
+        label: c.courseName,
+        kind: 'live' as const,
+        detail: checkInDetail(c),
+        color: c.byColor,
+        initials: initialsOf(c.by === 'me' ? 'You' : c.byName),
+        pulse: checkInStatus(c) === 'now',
+      })),
       ...playedCourses.map(({ course, rounds: count, best }) => ({
         id: course.id,
         latitude: course.coordinate.latitude,
@@ -178,7 +200,7 @@ export default function HomeScreen() {
         detail: 'On your wishlist',
       })),
     ],
-    [playedCourses, wishedCourses]
+    [checkIns, playedCourses, wishedCourses]
   );
 
   // Face the globe at the middle of everywhere you have played, or of your
@@ -192,8 +214,27 @@ export default function HomeScreen() {
   }, [playedCourses, wishedCourses]);
 
   const onSelectMarker = useCallback(
-    (id: string) => router.push({ pathname: '/course/[id]', params: { id } }),
-    [router]
+    (id: string) => {
+      // A live marker opens the course it's at, where the tag is listed in full.
+      const tag = id.startsWith('live:') && checkIns.find((c) => `live:${c.id}` === id);
+      const courseId = tag ? tag.courseId : id;
+      router.push({ pathname: '/course/[id]', params: { id: courseId } });
+    },
+    [checkIns, router]
+  );
+
+  /** Spin the globe to a tag and zoom in until its callout shows. */
+  const showCheckIn = useCallback(
+    (c: CheckIn) => {
+      setView('map');
+      setFocus({
+        longitude: c.coordinate.longitude,
+        latitude: c.coordinate.latitude,
+        key: Date.now(),
+      });
+      if (zoom < FLAG_ZOOM) setZoom(FLAG_ZOOM);
+    },
+    [zoom]
   );
 
   // List view: one section per country, the most-played country first and the
@@ -235,6 +276,7 @@ export default function HomeScreen() {
           appearance={appearance}
           onImageryStatus={setImagery}
           coverage={coverage}
+          focus={focus}
         />
       </Animated.View>
 
@@ -263,6 +305,16 @@ export default function HomeScreen() {
             </View>
           )}
           ItemSeparatorComponent={() => <View className="h-2" />}
+          ListHeaderComponent={
+            checkIns.length > 0 ? (
+              <PlayingNowList
+                checkIns={checkIns}
+                onPress={(c) =>
+                  router.push({ pathname: '/course/[id]', params: { id: c.courseId } })
+                }
+              />
+            ) : null
+          }
           renderItem={({ item }) => (
             <PlayedCourseRow item={item} onPress={() => onSelectMarker(item.course.id)} />
           )}
@@ -394,6 +446,20 @@ export default function HomeScreen() {
             <AppearanceButton appearance={appearance} onAppearanceChange={setAppearance} />
           </Animated.View>
         </View>
+
+        {/* Who's out playing: a chip per tag, each a shortcut to its spot on the globe. */}
+        {checkIns.length > 0 && (
+          <Animated.View
+            style={{ opacity: mapOpacity }}
+            pointerEvents={view === 'map' ? 'auto' : 'none'}
+          >
+            <HorizontalScroll contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+              {checkIns.map((c) => (
+                <PlayingChip key={c.id} checkIn={c} onPress={() => showCheckIn(c)} />
+              ))}
+            </HorizontalScroll>
+          </Animated.View>
+        )}
       </View>
 
       <ProgressSummary
@@ -407,7 +473,7 @@ export default function HomeScreen() {
       />
 
       {/* Legend: what the two dot colours mean */}
-      {(!empty || wishedCourses.length > 0) && (
+      {(!empty || wishedCourses.length > 0 || checkIns.length > 0) && (
         <Animated.View
           style={{ position: 'absolute', left: 16, bottom: tabSpace + 16, opacity: mapOpacity }}
           pointerEvents="none"
@@ -416,6 +482,7 @@ export default function HomeScreen() {
             <View className="flex-row items-center gap-3">
               <LegendDot color={palette.pin} label="Played" />
               <LegendDot color={palette.wishlist} label="Wishlist" />
+              {checkIns.length > 0 && <LegendDot color={palette.live} label="Playing now" />}
             </View>
             {/* Each continent shaded gets its own colour; name the ones on show. */}
             {shadedContinents.length > 0 && (
@@ -483,6 +550,44 @@ function PlayedCourseRow({ item, onPress }: { item: PlayedCourse; onPress: () =>
         </View>
       )}
       <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+    </Pressable>
+  );
+}
+
+/** A tag as a chip: the player's disc and name, and where they are. */
+function PlayingChip({ checkIn, onPress }: { checkIn: CheckIn; onPress: () => void }) {
+  const me = checkIn.by === 'me';
+  const now = checkInStatus(checkIn) === 'now';
+  return (
+    <Pressable
+      className="h-10 flex-row items-center gap-2 rounded-full border border-border bg-card/90 pl-1 pr-3 active:opacity-80"
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${me ? 'You' : checkIn.byName}, ${checkInDetail(checkIn)} at ${checkIn.courseName}. Show on globe`}
+    >
+      <View
+        className="h-8 w-8 items-center justify-center rounded-full"
+        style={{ backgroundColor: checkIn.byColor }}
+      >
+        <Text className="font-bold text-xs" style={{ color: '#06240f' }}>
+          {initialsOf(me ? 'You' : checkIn.byName)}
+        </Text>
+        {now && (
+          <View
+            className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-background"
+            style={{ backgroundColor: colors.info }}
+          />
+        )}
+      </View>
+      <View>
+        <Text className="font-semibold text-xs text-foreground" numberOfLines={1}>
+          {me ? 'You' : checkIn.byName}
+          {checkIn.with.length ? ` +${checkIn.with.length}` : ''}
+        </Text>
+        <Text className="text-[10px] text-muted-foreground" numberOfLines={1}>
+          {checkIn.courseName}
+        </Text>
+      </View>
     </Pressable>
   );
 }

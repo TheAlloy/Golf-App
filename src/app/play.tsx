@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CheckInSheet } from '@/components/check-in-sheet';
 import { LiquidPillBar, PillSlot, useTabBarSpace } from '@/components/liquid-pill-bar';
 import LiveMap from '@/components/live/live-map';
 import LiveScorecard from '@/components/live/live-scorecard';
@@ -12,7 +13,7 @@ import { colors, GLOBE_COLORS } from '@/constants/theme';
 import { liveHolePar } from '@/lib/live-round';
 import { useLiveLocation } from '@/lib/use-live-location';
 import { useWind } from '@/lib/wind';
-import { useAppStore, useCourse } from '@/store/use-app-store';
+import { useAppStore, useCourse, useMyCheckIn } from '@/store/use-app-store';
 
 type Tab = 'map' | 'card';
 
@@ -34,7 +35,10 @@ export default function PlayScreen() {
   const discardLiveRound = useAppStore((s) => s.discardLiveRound);
   const setLivePar = useAppStore((s) => s.setLivePar);
   const [tab, setTab] = useState<Tab>('map');
+  const [tagOpen, setTagOpen] = useState(false);
   const bottomSpace = useTabBarSpace();
+  // Your "playing here" tag for this course, if you've posted one.
+  const myTag = useMyCheckIn(live?.courseId);
 
   const location = useLiveLocation(!!live && tab === 'map');
   const wind = useWind(course?.coordinate);
@@ -110,6 +114,27 @@ export default function PlayScreen() {
             <Text className="flex-1 font-semibold text-sm text-foreground" numberOfLines={1}>
               {course.name}
             </Text>
+            {/* Tag: tell friends you're here. Filled once you have. */}
+            <Pressable
+              className="flex-row items-center gap-1 rounded-full px-2 py-1 active:opacity-70"
+              style={{ backgroundColor: myTag ? colors.primary : 'rgba(255, 255, 255, 0.08)' }}
+              onPress={() => setTagOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={myTag ? 'Tagged here. Change tag' : 'Tag yourself here'}
+              hitSlop={4}
+            >
+              <Ionicons
+                name={myTag ? 'pricetag' : 'pricetag-outline'}
+                size={12}
+                color={myTag ? colors.primaryForeground : colors.foreground}
+              />
+              <Text
+                className="font-semibold text-[10px]"
+                style={{ color: myTag ? colors.primaryForeground : colors.foreground }}
+              >
+                {myTag ? (myTag.with.length ? `Tagged +${myTag.with.length}` : 'Tagged') : 'Tag'}
+              </Text>
+            </Pressable>
             {location.kind === 'fix' ? (
               <Ionicons name="navigate" size={13} color={colors.primaryBright} />
             ) : location.kind === 'waiting' ? (
@@ -159,6 +184,19 @@ export default function PlayScreen() {
       </View>
 
       <LiquidPillBar slots={slots} activeSlot={tab === 'map' ? 0 : 1} />
+
+      <CheckInSheet
+        visible={tagOpen}
+        onClose={() => setTagOpen(false)}
+        courseId={course.id}
+        // Whoever is on the card comes pre-ticked.
+        initialWith={
+          myTag?.with ??
+          live.players
+            .filter((p) => p.id !== 'me')
+            .map((p) => ({ friendId: p.friendId, name: p.name }))
+        }
+      />
     </View>
   );
 }
