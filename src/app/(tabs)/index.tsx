@@ -19,7 +19,7 @@ import {
   MapAppearance,
 } from '@/components/appearance-button';
 import { ProgressSummary } from '@/components/progress-summary';
-import { CoveragePicker } from '@/components/coverage-picker';
+import { DEFAULT_FILTERS, GlobeFilters } from '@/components/globe-filters';
 import { HorizontalScroll } from '@/components/horizontal-scroll';
 import { PlayingNowList } from '@/components/playing-now';
 import { useLiquidSlot } from '@/components/liquid-pill-bar';
@@ -36,7 +36,7 @@ import {
 } from '@/constants/theme';
 import { checkInDetail, checkInStatus, initialsOf } from '@/lib/check-ins';
 import { cn } from '@/lib/cn';
-import { CoverageLevel, coverageShapes } from '@/lib/coverage';
+import { coverageShapes } from '@/lib/coverage';
 import { IMAGERY, IMAGERY_ENABLED, TERRAIN_ENABLED, TERRAIN_IMAGERY } from '@/lib/imagery';
 import { computeProgression } from '@/lib/progression';
 import { CheckIn, Course, Round } from '@/models/types';
@@ -129,10 +129,11 @@ export default function HomeScreen() {
   // Who's out playing: friends' tags and your own, newest tee time first.
   const checkIns = useShowingCheckIns();
   const [focus, setFocus] = useState<GlobeFocus | null>(null);
-  // The "Playing now" switch: off takes every tag off the globe.
-  const [showTags, setShowTags] = useState(true);
+  // What the funnel menu shows: shading, course pins, live players.
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const showTags = filters.live;
   // "Where I've played" shading; only the dark map draws it.
-  const [coverageLevel, setCoverageLevel] = useState<CoverageLevel>('off');
+  const coverageLevel = filters.coverage;
   const showCoverage = view === 'map' && appearance === 'map';
 
   const playedCourses = useMemo(
@@ -191,7 +192,7 @@ export default function HomeScreen() {
         initials: initialsOf(c.by === 'me' ? 'You' : c.byName),
         pulse: checkInStatus(c) === 'now',
       })),
-      ...playedCourses.map(({ course, rounds: count, best }) => ({
+      ...(filters.played ? playedCourses : []).map(({ course, rounds: count, best }) => ({
         id: course.id,
         latitude: course.coordinate.latitude,
         longitude: course.coordinate.longitude,
@@ -199,7 +200,7 @@ export default function HomeScreen() {
         kind: 'played' as const,
         detail: playedDetail(count, best),
       })),
-      ...wishedCourses.map((course) => ({
+      ...(filters.wishlist ? wishedCourses : []).map((course) => ({
         id: course.id,
         latitude: course.coordinate.latitude,
         longitude: course.coordinate.longitude,
@@ -208,7 +209,7 @@ export default function HomeScreen() {
         detail: 'On your wishlist',
       })),
     ],
-    [checkIns, playedCourses, showTags, wishedCourses]
+    [checkIns, filters.played, filters.wishlist, playedCourses, showTags, wishedCourses]
   );
 
   // Face the globe at the middle of everywhere you have played, or of your
@@ -234,7 +235,7 @@ export default function HomeScreen() {
   /** Spin the globe to a tag and zoom in until its callout shows. */
   const showCheckIn = useCallback(
     (c: CheckIn) => {
-      setShowTags(true);
+      setFilters((f) => (f.live ? f : { ...f, live: true }));
       setView('map');
       setFocus({
         longitude: c.coordinate.longitude,
@@ -447,32 +448,19 @@ export default function HomeScreen() {
                 );
               })}
             </View>
-            {/* "Where I've played" shading, drawn by the vector map only. */}
-            {appearance === 'map' && (
-              <Animated.View
-                style={{ opacity: mapOpacity }}
-                pointerEvents={view === 'map' ? 'auto' : 'none'}
-              >
-                <CoveragePicker
-                  value={coverageLevel}
-                  onChange={setCoverageLevel}
-                  size={APPEARANCE_BUTTON_SIZE}
-                />
-              </Animated.View>
-            )}
-            {/* The "Playing now" layer switch, in line with the other filter. */}
-            {checkIns.length > 0 && (
-              <Animated.View
-                style={{ opacity: mapOpacity }}
-                pointerEvents={view === 'map' ? 'auto' : 'none'}
-              >
-                <PlayingNowSwitch
-                  on={showTags}
-                  count={checkIns.length}
-                  onPress={() => setShowTags((v) => !v)}
-                />
-              </Animated.View>
-            )}
+            {/* Filters: shading, course pins and live players. */}
+            <Animated.View
+              style={{ opacity: mapOpacity }}
+              pointerEvents={view === 'map' ? 'auto' : 'none'}
+            >
+              <GlobeFilters
+                value={filters}
+                onChange={setFilters}
+                liveCount={checkIns.length}
+                shadingAvailable={appearance === 'map'}
+                size={APPEARANCE_BUTTON_SIZE}
+              />
+            </Animated.View>
           </View>
           <Animated.View
             style={{ opacity: mapOpacity }}
@@ -515,9 +503,11 @@ export default function HomeScreen() {
         >
           <View className="gap-2 rounded-xl bg-card/90 px-3 py-2">
             <View className="flex-row items-center gap-3">
-              <LegendDot color={palette.pin} label="Played" />
-              <LegendDot color={palette.wishlist} label="Wishlist" />
-              {checkIns.length > 0 && <LegendDot color={palette.live} label="Playing now" />}
+              {filters.played && <LegendDot color={palette.pin} label="Played" />}
+              {filters.wishlist && <LegendDot color={palette.wishlist} label="Wishlist" />}
+              {checkIns.length > 0 && showTags && (
+                <LegendDot color={palette.live} label="Playing now" />
+              )}
             </View>
             {/* Each continent shaded gets its own colour; name the ones on show. */}
             {shadedContinents.length > 0 && (
@@ -618,47 +608,6 @@ function WishedCourseRow({ item, onPress }: { item: WishedCourse; onPress: () =>
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
-    </Pressable>
-  );
-}
-
-/**
- * The switch for the "Playing now" layer, the same round shape and height
- * as the filter beside it: a people icon and how many are out, filled
- * while the tags are on the globe.
- */
-function PlayingNowSwitch({
-  on,
-  count,
-  onPress,
-}: {
-  on: boolean;
-  count: number;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      className="flex-row items-center gap-1 rounded-full border px-3 active:opacity-80"
-      style={{
-        height: APPEARANCE_BUTTON_SIZE,
-        backgroundColor: on ? colors.info : 'rgba(18, 18, 18, 0.9)',
-        borderColor: on ? colors.info : colors.border,
-      }}
-      onPress={onPress}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: on }}
-      accessibilityLabel={`Playing now, ${count} ${count === 1 ? 'tag' : 'tags'}. ${
-        on ? 'Hide from globe' : 'Show on globe'
-      }`}
-    >
-      <Ionicons
-        name={on ? 'people' : 'people-outline'}
-        size={20}
-        color={on ? '#06240f' : colors.foreground}
-      />
-      <Text className="font-bold text-sm" style={{ color: on ? '#06240f' : colors.foreground }}>
-        {count}
-      </Text>
     </Pressable>
   );
 }
