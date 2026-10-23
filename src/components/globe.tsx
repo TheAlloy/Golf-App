@@ -905,7 +905,7 @@ export default function Globe({
                 }
                 avatar={
                   p.kind === 'live'
-                    ? { color: p.color ?? pal.live, initials: p.initials ?? '' }
+                    ? { color: p.color ?? pal.live, initials: p.initials ?? '', now: p.pulse }
                     : null
                 }
               />
@@ -1089,8 +1089,11 @@ function Callout({
   color: string;
   longitude: number;
   latitude: number;
-  /** For someone playing here: their disc stands in for the thumbnail. */
-  avatar: { color: string; initials: string } | null;
+  /**
+   * For someone playing here: the box fills with their colour, their disc
+   * stands in for the thumbnail, and a lime dot marks them as out right now.
+   */
+  avatar: { color: string; initials: string; now: boolean } | null;
 }) {
   const tx = x + THUMB_INSET;
   const ty = y + THUMB_INSET;
@@ -1106,17 +1109,17 @@ function Callout({
         width={w}
         height={h}
         rx={12}
-        fill={GLOBE_COLORS.callout}
-        stroke={GLOBE_COLORS.calloutEdge}
+        fill={avatar ? avatar.color : GLOBE_COLORS.callout}
+        stroke={avatar ? 'rgba(255, 255, 255, 0.55)' : GLOBE_COLORS.calloutEdge}
         strokeWidth={1}
       />
       {avatar && (
         <G>
-          <Circle cx={tx + THUMB / 2} cy={ty + THUMB / 2} r={THUMB / 2} fill={avatar.color} />
+          <Circle cx={tx + THUMB / 2} cy={ty + THUMB / 2} r={THUMB / 2} fill="rgba(0, 0, 0, 0.3)" />
           <SvgText
             x={tx + THUMB / 2}
             y={ty + THUMB / 2 + 5}
-            fill="#06240f"
+            fill="#fff"
             fontSize={14}
             fontFamily="Manrope_700Bold"
             fontWeight="700"
@@ -1124,6 +1127,16 @@ function Callout({
           >
             {avatar.initials}
           </SvgText>
+          {avatar.now && (
+            <Circle
+              cx={x + w - 10}
+              cy={y + 10}
+              r={3.5}
+              fill={GLOBE_COLORS.wishlist}
+              stroke="rgba(0, 0, 0, 0.35)"
+              strokeWidth={1}
+            />
+          )}
         </G>
       )}
       {!avatar && (
@@ -1158,7 +1171,7 @@ function Callout({
       <SvgText
         x={x + CALLOUT_TEXT_X}
         y={y + 18}
-        fill={GLOBE_COLORS.pinLabel}
+        fill={avatar ? '#06240f' : GLOBE_COLORS.pinLabel}
         fontSize={CALLOUT_NAME_SIZE}
         fontFamily="Manrope_600SemiBold"
         fontWeight="600"
@@ -1169,7 +1182,7 @@ function Callout({
       <SvgText
         x={x + CALLOUT_TEXT_X}
         y={y + 33}
-        fill={color}
+        fill={avatar ? 'rgba(6, 36, 15, 0.8)' : color}
         fontSize={CALLOUT_DETAIL_SIZE}
         fontFamily="Manrope_600SemiBold"
         fontWeight="600"
