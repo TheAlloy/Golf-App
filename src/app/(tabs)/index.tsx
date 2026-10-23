@@ -61,6 +61,11 @@ type PlayedCourse = {
   best?: Round;
 };
 
+/** A wishlisted course, not yet played. */
+type WishedCourse = { course: Course; wish: true };
+type ListRow = PlayedCourse | WishedCourse;
+type ListSection = { title: string; data: ListRow[]; wish?: boolean };
+
 /** "2026-07-20" -> "20 Jul 2026". */
 function formatDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -243,19 +248,27 @@ export default function HomeScreen() {
 
   // List view: one section per country, the most-played country first and the
   // most recently played course first within it.
-  const sections = useMemo(() => {
+  // The wishlist follows, newest addition first.
+  const sections = useMemo((): ListSection[] => {
     const byCountry = new Map<string, PlayedCourse[]>();
     for (const pc of playedCourses) {
       const key = pc.course.country || 'Elsewhere';
       byCountry.set(key, [...(byCountry.get(key) ?? []), pc]);
     }
-    return [...byCountry.entries()]
+    const played: ListSection[] = [...byCountry.entries()]
       .map(([title, data]) => ({
         title,
         data: [...data].sort((a, b) => b.lastPlayed.localeCompare(a.lastPlayed)),
       }))
       .sort((a, b) => b.data.length - a.data.length || a.title.localeCompare(b.title));
-  }, [playedCourses]);
+    const wished: ListRow[] = wishlist
+      .filter((w) => !playedIds.has(w.courseId))
+      .sort((a, b) => b.addedAt.localeCompare(a.addedAt))
+      .map((w) => courses.get(w.courseId))
+      .filter((c): c is Course => c !== undefined)
+      .map((course) => ({ course, wish: true as const }));
+    return wished.length ? [...played, { title: 'Wishlist', data: wished, wish: true }] : played;
+  }, [courses, playedCourses, playedIds, wishlist]);
 
   const empty = playedCourses.length === 0;
   const headerHeight = insets.top + 100;
@@ -305,6 +318,7 @@ export default function HomeScreen() {
               <Text className="text-xs text-muted-foreground">
                 {section.data.length} course
                 {section.data.length === 1 ? '' : 's'}
+                {section.wish ? ' to play' : ''}
               </Text>
             </View>
           )}
@@ -319,14 +333,18 @@ export default function HomeScreen() {
               />
             ) : null
           }
-          renderItem={({ item }) => (
-            <PlayedCourseRow item={item} onPress={() => onSelectMarker(item.course.id)} />
-          )}
+          renderItem={({ item }) =>
+            'wish' in item ? (
+              <WishedCourseRow item={item} onPress={() => onSelectMarker(item.course.id)} />
+            ) : (
+              <PlayedCourseRow item={item} onPress={() => onSelectMarker(item.course.id)} />
+            )
+          }
           ListEmptyComponent={
             <View className="items-center gap-2 py-16">
               <Ionicons name="flag-outline" size={28} color={colors.mutedForeground} />
               <Text className="text-center text-sm text-muted-foreground">
-                Courses you play show up here. Tap + to log your first round.
+                Courses you play or wishlist show up here. Tap + to log your first round.
               </Text>
             </View>
           }
@@ -442,6 +460,19 @@ export default function HomeScreen() {
                 />
               </Animated.View>
             )}
+            {/* The "Playing now" layer switch, in line with the other filter. */}
+            {checkIns.length > 0 && (
+              <Animated.View
+                style={{ opacity: mapOpacity }}
+                pointerEvents={view === 'map' ? 'auto' : 'none'}
+              >
+                <PlayingNowSwitch
+                  on={showTags}
+                  count={checkIns.length}
+                  onPress={() => setShowTags((v) => !v)}
+                />
+              </Animated.View>
+            )}
           </View>
           <Animated.View
             style={{ opacity: mapOpacity }}
@@ -451,23 +482,16 @@ export default function HomeScreen() {
           </Animated.View>
         </View>
 
-        {/* Who's out playing: a switch for the whole layer, then a chip per
-            tag, each a shortcut to its spot on the globe. */}
-        {checkIns.length > 0 && (
+        {/* Who's out playing: a chip per tag, each a shortcut to its spot on the globe. */}
+        {checkIns.length > 0 && showTags && (
           <Animated.View
             style={{ opacity: mapOpacity }}
             pointerEvents={view === 'map' ? 'auto' : 'none'}
           >
             <HorizontalScroll contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-              <PlayingNowSwitch
-                on={showTags}
-                count={checkIns.length}
-                onPress={() => setShowTags((v) => !v)}
-              />
-              {showTags &&
-                checkIns.map((c) => (
-                  <PlayingChip key={c.id} checkIn={c} onPress={() => showCheckIn(c)} />
-                ))}
+              {checkIns.map((c) => (
+                <PlayingChip key={c.id} checkIn={c} onPress={() => showCheckIn(c)} />
+              ))}
             </HorizontalScroll>
           </Animated.View>
         )}
@@ -565,7 +589,44 @@ function PlayedCourseRow({ item, onPress }: { item: PlayedCourse; onPress: () =>
   );
 }
 
-/** The switch for the layer: filled while tags are on the globe. */
+/** A wishlisted course: lime heart, name and place, where it sits on your list. */
+function WishedCourseRow({ item, onPress }: { item: WishedCourse; onPress: () => void }) {
+  const { course } = item;
+  const place = [course.city, course.region || course.country].filter(Boolean).join(', ');
+  return (
+    <Pressable
+      className="flex-row items-center gap-3 rounded-xl bg-card p-3 active:opacity-80"
+      onPress={onPress}
+    >
+      <View
+        className="h-11 w-11 items-center justify-center rounded-lg"
+        style={{ backgroundColor: 'hsla(68, 92%, 60%, 0.18)' }}
+      >
+        <Ionicons name="heart" size={18} color={GLOBE_COLORS.wishlist} />
+      </View>
+      <View className="flex-1">
+        <Text className="font-semibold text-sm text-foreground" numberOfLines={1}>
+          {course.name}
+        </Text>
+        {place !== '' && (
+          <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+            {place}
+          </Text>
+        )}
+        <Text className="mt-1 text-[11px] text-muted-foreground">
+          On your wishlist · next round here scores double
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+    </Pressable>
+  );
+}
+
+/**
+ * The switch for the "Playing now" layer, the same round shape and height
+ * as the filter beside it: a people icon and how many are out, filled
+ * while the tags are on the globe.
+ */
 function PlayingNowSwitch({
   on,
   count,
@@ -577,11 +638,11 @@ function PlayingNowSwitch({
 }) {
   return (
     <Pressable
-      className="h-12 flex-row items-center gap-2 rounded-full border px-4 active:opacity-80"
+      className="flex-row items-center gap-1 rounded-full border px-3 active:opacity-80"
       style={{
-        backgroundColor: on ? colors.info : colors.card,
+        height: APPEARANCE_BUTTON_SIZE,
+        backgroundColor: on ? colors.info : 'rgba(18, 18, 18, 0.9)',
         borderColor: on ? colors.info : colors.border,
-        boxShadow: on ? '0 4px 12px rgba(0, 0, 0, 0.35)' : undefined,
       }}
       onPress={onPress}
       accessibilityRole="switch"
@@ -592,20 +653,12 @@ function PlayingNowSwitch({
     >
       <Ionicons
         name={on ? 'people' : 'people-outline'}
-        size={18}
+        size={20}
         color={on ? '#06240f' : colors.foreground}
       />
       <Text className="font-bold text-sm" style={{ color: on ? '#06240f' : colors.foreground }}>
-        Playing now
+        {count}
       </Text>
-      <View
-        className="h-6 min-w-6 items-center justify-center rounded-full px-1"
-        style={{ backgroundColor: on ? 'rgba(0, 0, 0, 0.22)' : colors.muted }}
-      >
-        <Text className="font-bold text-xs" style={{ color: on ? '#fff' : colors.foreground }}>
-          {count}
-        </Text>
-      </View>
     </Pressable>
   );
 }

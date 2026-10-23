@@ -363,7 +363,7 @@ export default function Globe({
     loop.start();
     return () => loop.stop();
   }, [anyPulse, pulse]);
-  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [5, 22] });
+  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [7, 28] });
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] });
 
   /**
@@ -997,8 +997,8 @@ function LivePin({
   pulseR: Animated.AnimatedInterpolation<number>;
   pulseOpacity: Animated.AnimatedInterpolation<number>;
 }) {
-  const r = big ? 8 : 4.5;
-  const y = big ? cy - 10 : cy;
+  const r = big ? 11 : 6.5;
+  const y = big ? cy - 13 : cy;
   return (
     <G>
       {pulse && (
@@ -1023,9 +1023,9 @@ function LivePin({
       {big && (
         <SvgText
           x={cx}
-          y={y + 3.2}
+          y={y + 4}
           fill="#06240f"
-          fontSize={9}
+          fontSize={12}
           fontFamily="Manrope_700Bold"
           fontWeight="700"
           textAnchor="middle"
