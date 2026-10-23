@@ -154,8 +154,9 @@ export type GlobeMarker = {
 export type GlobeFocus = { longitude: number; latitude: number; key: number };
 /** How long the globe takes to swing round to a focus. */
 const FOCUS_MS = 600;
-/** One beat of a live marker's pulse. */
+/** One beat of a live marker's pulse, and how far the ring spreads. */
 const PULSE_MS = 1800;
+const PULSE_R = 28;
 
 /** Length of the dissolve between the map and terrain looks. */
 const APPEARANCE_FADE_MS = 240;
@@ -347,7 +348,9 @@ export default function Globe({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.key]);
 
-  // Live markers breathe: one shared ring that grows and fades, round and round.
+  // Live markers breathe: one shared ring that grows and fades, round and
+  // round. It's drawn by plain views over the SVG, driven by transform and
+  // opacity, so each beat costs nothing on the globe's render.
   const anyPulse = markers.some((m) => m.kind === 'live' && m.pulse);
   const [pulse] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -357,13 +360,13 @@ export default function Globe({
         toValue: 1,
         duration: PULSE_MS,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: false,
+        useNativeDriver: true,
       })
     );
     loop.start();
     return () => loop.stop();
   }, [anyPulse, pulse]);
-  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [7, 28] });
+  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] });
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] });
 
   /**
@@ -682,23 +685,31 @@ export default function Globe({
     };
   }, []);
 
-  const { landPaths, coveragePaths, graticulePath, pins } = useMemo(() => {
+  const { landPath, coveragePaths, graticulePath, pins } = useMemo(() => {
     const path = geoPath(projection);
     const centre: [number, number] = [-rotation[0], -rotation[1]];
     const visible = (lng: number, lat: number) => geoDistance([lng, lat], centre) < Math.PI / 2;
 
-    const coveragePaths = coverage
-      .map((c) => ({ d: path(c.feature as never), continent: c.continent }))
-      .filter((c): c is { d: string; continent: Continent } => Boolean(c.d));
+    // One path per continent, for the same reason as the land below.
+    const byContinent = new Map<Continent, string>();
+    for (const c of coverage) {
+      const d = path(c.feature as never);
+      if (d) byContinent.set(c.continent, (byContinent.get(c.continent) ?? '') + d);
+    }
+    const coveragePaths = [...byContinent.entries()].map(([continent, d]) => ({ d, continent }));
 
     // Finer coastlines once zoomed in, and only the countries that can be on screen.
     const fine = zoom >= FINE_ZOOM;
     const source = fine ? fineLand() : LAND;
     const win = fine ? visibleWindow((p) => projection.invert?.(p) ?? null, width, height) : null;
-    const landPaths = source.features
+    // All the land as one path: one fill and one stroke to rasterise per
+    // frame, rather than one of each per country, which is what made
+    // dragging stutter. Shared borders are drawn once instead of twice.
+    const landPath = source.features
       .filter((f) => !win || overlaps(boundsOf(f), win))
       .map((f) => path(f as never))
-      .filter((d): d is string => Boolean(d));
+      .filter((d): d is string => Boolean(d))
+      .join('');
 
     // Every course gets a dot at every zoom, green for played and lime yellow for
     // wishlisted, so the two always read apart; names wait for zoom 3.
@@ -747,7 +758,7 @@ export default function Globe({
       return { ...p, showLabel: clear, callout };
     });
 
-    return { landPaths, coveragePaths, graticulePath: path(GRATICULE as never) ?? '', pins };
+    return { landPath, coveragePaths, graticulePath: path(GRATICULE as never) ?? '', pins };
   }, [coverage, markers, projection, rotation, zoom, width, height]);
 
   return (
@@ -822,16 +833,15 @@ export default function Globe({
 
           {/* Terrain keeps only faint borders over the imagery, like Earth does;
               the map's land fill fades away underneath. */}
-          {landPaths.map((d, i) => (
+          {landPath !== '' && (
             <Path
-              key={`l${i}`}
-              d={d}
+              d={landPath}
               fill={GLOBE_COLORS.land}
               fillOpacity={mapOpacity}
               stroke={pal.landStroke}
               strokeWidth={mix > 0.5 ? 0.4 : 0.5}
             />
-          ))}
+          )}
 
           {/* Where you've played, shaded over the land at the chosen level. */}
           {coveragePaths.map(({ d, continent }, i) => {
@@ -851,9 +861,6 @@ export default function Globe({
                   color={p.color ?? pal.live}
                   initials={p.initials ?? ''}
                   big={zoom >= 3}
-                  pulse={p.pulse}
-                  pulseR={pulseR}
-                  pulseOpacity={pulseOpacity}
                 />
               );
             }
@@ -913,6 +920,33 @@ export default function Globe({
           )}
         </G>
       </Svg>
+      {/* Pulse rings for everyone out on a course, above the SVG. */}
+      {anyPulse && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 2 }]} pointerEvents="none">
+          {pins.map((p) => {
+            if (p.kind !== 'live' || !p.pulse) return null;
+            const big = zoom >= 3;
+            const y = big ? p.cy - 13 : p.cy;
+            return (
+              <Animated.View
+                key={`pulse-${p.id}`}
+                style={{
+                  position: 'absolute',
+                  left: p.cx - PULSE_R,
+                  top: y - PULSE_R,
+                  width: PULSE_R * 2,
+                  height: PULSE_R * 2,
+                  borderRadius: PULSE_R,
+                  borderWidth: 1.5,
+                  borderColor: p.color ?? pal.live,
+                  opacity: pulseOpacity,
+                  transform: [{ scale: pulseScale }],
+                }}
+              />
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -971,12 +1005,10 @@ function thumbTiles(longitude: number, latitude: number, size: number) {
   return { tiles, tileSize: TILE_PX * scale };
 }
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
 /**
- * Someone playing at (cx, cy): a disc in their colour with their initial,
- * ringed by a pulse while they're out on the course. Up close it stands on
- * a short stem under its callout, like a flag does.
+ * Someone playing at (cx, cy): a disc in their colour with their initial.
+ * (The pulse ring around it is drawn over the SVG by the globe.) Up close
+ * it stands on a short stem under its callout, like a flag does.
  */
 function LivePin({
   cx,
@@ -984,34 +1016,17 @@ function LivePin({
   color,
   initials,
   big,
-  pulse,
-  pulseR,
-  pulseOpacity,
 }: {
   cx: number;
   cy: number;
   color: string;
   initials: string;
   big: boolean;
-  pulse: boolean;
-  pulseR: Animated.AnimatedInterpolation<number>;
-  pulseOpacity: Animated.AnimatedInterpolation<number>;
 }) {
   const r = big ? 11 : 6.5;
   const y = big ? cy - 13 : cy;
   return (
     <G>
-      {pulse && (
-        <AnimatedCircle
-          cx={cx}
-          cy={y}
-          r={pulseR}
-          fill="none"
-          stroke={color}
-          strokeWidth={1.5}
-          opacity={pulseOpacity}
-        />
-      )}
       {big && (
         <>
           <Ellipse cx={cx} cy={cy} rx={3} ry={1.2} fill="#000" opacity={0.45} />
