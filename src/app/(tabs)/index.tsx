@@ -124,8 +124,8 @@ export default function HomeScreen() {
   // Who's out playing: friends' tags and your own, newest tee time first.
   const checkIns = useShowingCheckIns();
   const [focus, setFocus] = useState<GlobeFocus | null>(null);
-  // Tags switched off with their chip: hidden from the globe until tapped again.
-  const [hiddenTags, setHiddenTags] = useState<Set<string>>(() => new Set());
+  // The "Playing now" switch: off takes every tag off the globe.
+  const [showTags, setShowTags] = useState(true);
   // "Where I've played" shading; only the dark map draws it.
   const [coverageLevel, setCoverageLevel] = useState<CoverageLevel>('off');
   const showCoverage = view === 'map' && appearance === 'map';
@@ -175,19 +175,17 @@ export default function HomeScreen() {
 
   const markers: GlobeMarker[] = useMemo(
     () => [
-      ...checkIns
-        .filter((c) => !hiddenTags.has(c.id))
-        .map((c) => ({
-          id: `live:${c.id}`,
-          latitude: c.coordinate.latitude,
-          longitude: c.coordinate.longitude,
-          label: c.courseName,
-          kind: 'live' as const,
-          detail: checkInDetail(c),
-          color: c.byColor,
-          initials: initialsOf(c.by === 'me' ? 'You' : c.byName),
-          pulse: checkInStatus(c) === 'now',
-        })),
+      ...(showTags ? checkIns : []).map((c) => ({
+        id: `live:${c.id}`,
+        latitude: c.coordinate.latitude,
+        longitude: c.coordinate.longitude,
+        label: c.courseName,
+        kind: 'live' as const,
+        detail: checkInDetail(c),
+        color: c.byColor,
+        initials: initialsOf(c.by === 'me' ? 'You' : c.byName),
+        pulse: checkInStatus(c) === 'now',
+      })),
       ...playedCourses.map(({ course, rounds: count, best }) => ({
         id: course.id,
         latitude: course.coordinate.latitude,
@@ -205,7 +203,7 @@ export default function HomeScreen() {
         detail: 'On your wishlist',
       })),
     ],
-    [checkIns, hiddenTags, playedCourses, wishedCourses]
+    [checkIns, playedCourses, showTags, wishedCourses]
   );
 
   // Face the globe at the middle of everywhere you have played, or of your
@@ -228,30 +226,19 @@ export default function HomeScreen() {
     [checkIns, router]
   );
 
-  /**
-   * A chip is a switch for its tag. Switching one on spins the globe to it
-   * and zooms in until its callout shows; off takes it off the globe.
-   */
-  const toggleCheckIn = useCallback(
+  /** Spin the globe to a tag and zoom in until its callout shows. */
+  const showCheckIn = useCallback(
     (c: CheckIn) => {
-      if (hiddenTags.has(c.id)) {
-        setHiddenTags((h) => {
-          const next = new Set(h);
-          next.delete(c.id);
-          return next;
-        });
-        setView('map');
-        setFocus({
-          longitude: c.coordinate.longitude,
-          latitude: c.coordinate.latitude,
-          key: Date.now(),
-        });
-        if (zoom < FLAG_ZOOM) setZoom(FLAG_ZOOM);
-      } else {
-        setHiddenTags((h) => new Set(h).add(c.id));
-      }
+      setShowTags(true);
+      setView('map');
+      setFocus({
+        longitude: c.coordinate.longitude,
+        latitude: c.coordinate.latitude,
+        key: Date.now(),
+      });
+      if (zoom < FLAG_ZOOM) setZoom(FLAG_ZOOM);
     },
-    [hiddenTags, zoom]
+    [zoom]
   );
 
   // List view: one section per country, the most-played country first and the
@@ -464,21 +451,23 @@ export default function HomeScreen() {
           </Animated.View>
         </View>
 
-        {/* Who's out playing: a chip per tag, each a shortcut to its spot on the globe. */}
+        {/* Who's out playing: a switch for the whole layer, then a chip per
+            tag, each a shortcut to its spot on the globe. */}
         {checkIns.length > 0 && (
           <Animated.View
             style={{ opacity: mapOpacity }}
             pointerEvents={view === 'map' ? 'auto' : 'none'}
           >
             <HorizontalScroll contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-              {checkIns.map((c) => (
-                <PlayingChip
-                  key={c.id}
-                  checkIn={c}
-                  on={!hiddenTags.has(c.id)}
-                  onPress={() => toggleCheckIn(c)}
-                />
-              ))}
+              <PlayingNowSwitch
+                on={showTags}
+                count={checkIns.length}
+                onPress={() => setShowTags((v) => !v)}
+              />
+              {showTags &&
+                checkIns.map((c) => (
+                  <PlayingChip key={c.id} checkIn={c} onPress={() => showCheckIn(c)} />
+                ))}
             </HorizontalScroll>
           </Animated.View>
         )}
@@ -576,19 +565,53 @@ function PlayedCourseRow({ item, onPress }: { item: PlayedCourse; onPress: () =>
   );
 }
 
-/**
- * A tag as a chip: a switch in the player's colour. On, it's filled and the
- * tag is on the globe; off, it's dimmed and the tag is hidden.
- */
-function PlayingChip({
-  checkIn,
+/** The switch for the layer: filled while tags are on the globe. */
+function PlayingNowSwitch({
   on,
+  count,
   onPress,
 }: {
-  checkIn: CheckIn;
   on: boolean;
+  count: number;
   onPress: () => void;
 }) {
+  return (
+    <Pressable
+      className="h-12 flex-row items-center gap-2 rounded-full border px-4 active:opacity-80"
+      style={{
+        backgroundColor: on ? colors.info : colors.card,
+        borderColor: on ? colors.info : colors.border,
+        boxShadow: on ? '0 4px 12px rgba(0, 0, 0, 0.35)' : undefined,
+      }}
+      onPress={onPress}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on }}
+      accessibilityLabel={`Playing now, ${count} ${count === 1 ? 'tag' : 'tags'}. ${
+        on ? 'Hide from globe' : 'Show on globe'
+      }`}
+    >
+      <Ionicons
+        name={on ? 'people' : 'people-outline'}
+        size={18}
+        color={on ? '#06240f' : colors.foreground}
+      />
+      <Text className="font-bold text-sm" style={{ color: on ? '#06240f' : colors.foreground }}>
+        Playing now
+      </Text>
+      <View
+        className="h-6 min-w-6 items-center justify-center rounded-full px-1"
+        style={{ backgroundColor: on ? 'rgba(0, 0, 0, 0.22)' : colors.muted }}
+      >
+        <Text className="font-bold text-xs" style={{ color: on ? '#fff' : colors.foreground }}>
+          {count}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/** A tag as a chip in the player's colour: tap to spin the globe to them. */
+function PlayingChip({ checkIn, onPress }: { checkIn: CheckIn; onPress: () => void }) {
   const me = checkIn.by === 'me';
   const now = checkInStatus(checkIn) === 'now';
   const who = me ? 'You' : checkIn.byName;
@@ -596,50 +619,33 @@ function PlayingChip({
     <Pressable
       className="h-12 flex-row items-center gap-3 rounded-full pl-1 pr-4 active:opacity-80"
       style={{
-        backgroundColor: on ? checkIn.byColor : colors.card,
-        borderWidth: 1.5,
-        borderColor: on ? checkIn.byColor : colors.border,
-        opacity: on ? 1 : 0.6,
-        boxShadow: on ? '0 4px 12px rgba(0, 0, 0, 0.35)' : undefined,
+        backgroundColor: checkIn.byColor,
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)',
       }}
       onPress={onPress}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: on }}
-      accessibilityLabel={`${who}, ${checkInDetail(checkIn)} at ${checkIn.courseName}. ${
-        on ? 'Hide from globe' : 'Show on globe'
-      }`}
+      accessibilityRole="button"
+      accessibilityLabel={`${who}, ${checkInDetail(checkIn)} at ${checkIn.courseName}. Show on globe`}
     >
       <View
         className="h-10 w-10 items-center justify-center rounded-full"
-        style={{ backgroundColor: on ? 'rgba(0, 0, 0, 0.28)' : checkIn.byColor }}
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.28)' }}
       >
-        <Text className="font-bold text-sm" style={{ color: on ? '#fff' : '#06240f' }}>
+        <Text className="font-bold text-sm" style={{ color: '#fff' }}>
           {initialsOf(who)}
         </Text>
         {now && (
           <View
             className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2"
-            style={{
-              backgroundColor: NAV_COLORS.live,
-              borderColor: on ? checkIn.byColor : colors.card,
-            }}
+            style={{ backgroundColor: NAV_COLORS.live, borderColor: checkIn.byColor }}
           />
         )}
       </View>
       <View>
-        <Text
-          className="font-bold text-sm"
-          style={{ color: on ? '#06240f' : colors.foreground }}
-          numberOfLines={1}
-        >
+        <Text className="font-bold text-sm" style={{ color: '#06240f' }} numberOfLines={1}>
           {who}
           {checkIn.with.length ? ` +${checkIn.with.length}` : ''}
         </Text>
-        <Text
-          className="text-[11px]"
-          style={{ color: on ? 'rgba(6, 36, 15, 0.75)' : colors.mutedForeground }}
-          numberOfLines={1}
-        >
+        <Text className="text-[11px]" style={{ color: 'rgba(6, 36, 15, 0.75)' }} numberOfLines={1}>
           {now ? 'Playing · ' : ''}
           {checkIn.courseName}
         </Text>
