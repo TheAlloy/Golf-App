@@ -864,10 +864,10 @@ export default function Globe({
                 <Circle
                   cx={p.cx}
                   cy={p.cy}
-                  r={2.3}
+                  r={1.6}
                   fill={color}
                   stroke={mix > 0.5 ? 'rgba(0, 0, 0, 0.5)' : undefined}
-                  strokeWidth={0.8}
+                  strokeWidth={0.6}
                 />
                 {zoom >= 3 && p.showLabel && (
                   <SvgText
